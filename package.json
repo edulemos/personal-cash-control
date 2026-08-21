@@ -1,0 +1,16 @@
+{
+  "name": "personal-cash-control",
+  "version": "1.0.0",
+  "description": "Personal Cash Control with Electron",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "electron": "^43.4.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3"
+  }
+}

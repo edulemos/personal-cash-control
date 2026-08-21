@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>Personal Cash Control</title>
+    <!-- Basic CSP allowing Google Fonts and local images -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:;">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div class="app-container">
+      <header class="top-bar">
+        <!-- Drag region for hidden titlebar -->
+      </header>
+      
+      <main class="content">
+        <div class="welcome-card">
+          <img src="assets/logo.jpg" alt="Cash Control Logo" class="logo">
+          <h1>Bem-vindo ao <span>Cash Control</span></h1>
+          <p>Seu controle financeiro pessoal, agora no desktop.</p>
+          <button class="btn-primary" id="btn-start">Começar</button>
+        </div>
+      </main>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
