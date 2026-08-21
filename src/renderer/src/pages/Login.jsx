@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, User } from 'lucide-react';
 
 export default function Login({ onLoginSuccess }) {
@@ -11,6 +11,17 @@ export default function Login({ onLoginSuccess }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('cashControlUser');
+    if (stored) {
+      try {
+        const user = JSON.parse(stored);
+        onLoginSuccess(user);
+      } catch (_) {}
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,6 +32,9 @@ export default function Login({ onLoginSuccess }) {
       if (isRegistering) {
         const res = await window.api.register(form);
         if (res.success) {
+          if (rememberMe) {
+            localStorage.setItem('cashControlUser', JSON.stringify(res.user));
+          }
           onLoginSuccess(res.user);
         } else {
           setError(res.message);
@@ -28,6 +42,9 @@ export default function Login({ onLoginSuccess }) {
       } else {
         const res = await window.api.login({ username: form.username, password: form.password });
         if (res.success) {
+          if (rememberMe) {
+            localStorage.setItem('cashControlUser', JSON.stringify(res.user));
+          }
           onLoginSuccess(res.user);
         } else {
           setError(res.message);
@@ -116,6 +133,16 @@ export default function Login({ onLoginSuccess }) {
             </div>
           </div>
 
+          <div className="flex items-center mb-4">
+            <input 
+              type="checkbox" 
+              id="rememberMe"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+              className="w-4 h-4 text-accent bg-black/20 border border-white/10 rounded"
+            />
+            <label htmlFor="rememberMe" className="ml-2 text-sm text-text-muted">Lembrar-me</label>
+          </div>
           <button 
             type="submit" 
             disabled={loading}

@@ -15,6 +15,7 @@ export default function Transactions({ userId, startDate, endDate }) {
   
   // Form state
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ 
     description: '', 
     amount: '', 
@@ -42,21 +43,49 @@ export default function Transactions({ userId, startDate, endDate }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await window.api.addTransaction({
+      const payload = {
         user_id: userId,
         description: form.description,
         amount: Number(form.amount),
         type: form.type,
         date: form.date,
-        category_id: Number(form.category_id),
-        is_fixed: form.is_fixed
-      });
-      setShowModal(false);
-      setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
+        // If no category selected, store null (allows FK to be optional)
+        category_id: form.category_id ? Number(form.category_id) : null,
+        // Ensure boolean value for fixed flag
+        is_fixed: !!form.is_fixed
+      };
+
+      if (editingId) {
+      const result = await window.api.updateTransaction(editingId, payload);
+    console.log('Update result:', result);
+      } else {
+        await window.api.addTransaction(payload);
+      }
+      
+      closeModal();
       fetchData();
     } catch (err) {
       console.error(err);
     }
+  };
+
+  const openEditModal = (t) => {
+    setForm({
+      description: t.description,
+      amount: t.amount,
+      type: t.type,
+      date: t.date,
+      category_id: t.category_id,
+      is_fixed: t.is_fixed
+    });
+    setEditingId(t.id);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingId(null);
+    setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
   };
 
   const handleDelete = async (id) => {
@@ -73,7 +102,14 @@ export default function Transactions({ userId, startDate, endDate }) {
           <h2 className="text-2xl font-bold">Transações</h2>
           <p className="text-text-muted">Gerencie suas receitas e despesas</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors">
+        <button 
+            onClick={() => {
+              setEditingId(null);
+              setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
+              setShowModal(true);
+            }} 
+            className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
+          >
           <Plus size={20} />
           Nova Transação
         </button>
@@ -116,10 +152,15 @@ export default function Transactions({ userId, startDate, endDate }) {
                     <td className={clsx("p-4 text-right font-medium", t.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
-                    <td className="p-4 text-center">
-                      <button onClick={() => handleDelete(t.id)} className="text-text-muted hover:text-rose-400 transition-colors">
-                        <Trash2 size={18} />
-                      </button>
+                    <td className="p-4">
+                      <div className="flex gap-2 justify-center">
+                        <button onClick={() => openEditModal(t)} className="p-2 text-text-muted hover:text-blue-400 hover:bg-white/5 rounded-lg transition-colors" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                        </button>
+                        <button onClick={() => window.api.deleteTransaction(t.id).then(fetchData)} className="p-2 text-text-muted hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors" title="Excluir">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -132,9 +173,10 @@ export default function Transactions({ userId, startDate, endDate }) {
       {/* Modal Simples */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-bg-card border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold mb-4">Nova Transação</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="glass-panel w-full max-w-md p-6 relative overflow-hidden">
+            <h2 className="text-xl font-bold mb-6">{editingId ? 'Editar Transação' : 'Nova Transação'}</h2>
+            
+            <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
               
               <div className="flex gap-4 mb-2">
                 <label className="flex-1 cursor-pointer">
@@ -158,22 +200,24 @@ export default function Transactions({ userId, startDate, endDate }) {
                 ))}
               </select>
 
-              <label className="flex items-center gap-3 cursor-pointer p-3 border border-white/10 rounded-lg bg-black/20 hover:bg-white/5 transition-colors">
-                <input 
-                  type="checkbox" 
-                  className="w-5 h-5 accent-accent"
-                  checked={form.is_fixed}
-                  onChange={e => setForm({...form, is_fixed: e.target.checked})}
-                />
-                <div>
-                  <p className="font-medium">Lançamento Fixo</p>
-                  <p className="text-xs text-text-muted">Repetirá automaticamente por 12 meses</p>
-                </div>
-              </label>
+              {!editingId && (
+                <label className="flex items-center gap-3 cursor-pointer p-3 border border-white/10 rounded-lg bg-black/20 hover:bg-white/5 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 accent-accent"
+                    checked={form.is_fixed}
+                    onChange={e => setForm({...form, is_fixed: e.target.checked})}
+                  />
+                  <div>
+                    <p className="font-medium">Lançamento Fixo</p>
+                    <p className="text-xs text-text-muted">Repetirá automaticamente por 12 meses</p>
+                  </div>
+                </label>
+              )}
 
               <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 rounded-lg text-text-muted hover:bg-white/5 transition-colors">Cancelar</button>
-                <button type="submit" className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-lg font-medium transition-colors">Salvar</button>
+                <button type="button" onClick={closeModal} className="px-5 py-2 rounded-lg text-text-muted hover:bg-white/5 transition-colors">Cancelar</button>
+                <button type="submit" className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-lg font-medium transition-colors">{editingId ? 'Atualizar' : 'Salvar'}</button>
               </div>
             </form>
           </div>

@@ -11,14 +11,10 @@ const initDb = () => {
   db = new Database(dbPath, { verbose: console.log });
   console.log('Banco de dados conectado em:', dbPath);
 
-  // ATENÇÃO: Dropando tabelas apenas durante esta fase de testes para atualizar o schema.
-  // Em produção, isso seria feito via migrations seguras.
+  // ATENÇÃO: As tabelas agora não são apagadas no reinício para persistir os dados.
+  // Em produção, modificações estruturais seriam feitas via migrations seguras.
   db.exec(`
-    DROP TABLE IF EXISTS transactions;
-    DROP TABLE IF EXISTS categories;
-    DROP TABLE IF EXISTS users;
-
-    CREATE TABLE users (
+    CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       username TEXT NOT NULL UNIQUE,
@@ -26,7 +22,7 @@ const initDb = () => {
       salt TEXT NOT NULL
     );
 
-    CREATE TABLE categories (
+    CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       name TEXT NOT NULL,
@@ -36,7 +32,7 @@ const initDb = () => {
       FOREIGN KEY(user_id) REFERENCES users(id)
     );
 
-    CREATE TABLE transactions (
+    CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       description TEXT NOT NULL,

@@ -4,9 +4,12 @@ const IPC_CHANNELS = {
   
   CATEGORIES_GET: 'categories:get',
   CATEGORIES_ADD: 'categories:add',
+  CATEGORIES_UPDATE: 'categories:update',
+  CATEGORIES_DELETE: 'categories:delete',
   
   TRANSACTIONS_GET: 'transactions:get',
   TRANSACTIONS_ADD: 'transactions:add',
+  TRANSACTIONS_UPDATE: 'transactions:update',
   TRANSACTIONS_DELETE: 'transactions:delete',
   
   DASHBOARD_STATS: 'dashboard:stats'
