@@ -18,18 +18,25 @@ const createWindow = () => {
     }
   });
 
-  win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  if (process.env.APP_ENV === 'dev') {
+    win.loadURL('http://localhost:5173');
+    win.webContents.openDevTools();
+  } else {
+    win.loadFile(path.join(__dirname, '../renderer/index.html'));
+  }
 };
 
 const { initDb } = require('./database/sqlite');
-const { setupIpcHandlers } = require('./ipc/accounts.ipc');
+const { setupCategoriesHandlers } = require('./ipc/categories.ipc');
+const { setupTransactionsHandlers } = require('./ipc/transactions.ipc');
 const { setupAuthHandlers } = require('./ipc/auth.ipc');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
   initDb();
-  setupIpcHandlers();
   setupAuthHandlers();
+  setupCategoriesHandlers();
+  setupTransactionsHandlers();
   
   createWindow();
 
