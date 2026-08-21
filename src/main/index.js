@@ -23,11 +23,13 @@ const createWindow = () => {
 
 const { initDb } = require('./database/sqlite');
 const { setupIpcHandlers } = require('./ipc/accounts.ipc');
+const { setupAuthHandlers } = require('./ipc/auth.ipc');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
   initDb();
   setupIpcHandlers();
+  setupAuthHandlers();
   
   createWindow();
 
