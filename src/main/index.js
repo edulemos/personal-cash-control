@@ -1,4 +1,5 @@
 const { app, BrowserWindow, screen } = require('electron');
+require('dotenv').config();
 const path = require('node:path');
 
 const createWindow = () => {
@@ -34,6 +35,7 @@ const { setupCategoriesHandlers } = require('./ipc/categories.ipc');
 const { setupTransactionsHandlers } = require('./ipc/transactions.ipc');
 const { setupAuthHandlers } = require('./ipc/auth.ipc');
 const { setupCreditCardsHandlers } = require('./ipc/creditCards.ipc');
+const setupSettingsHandlers = require('./ipc/settings.ipc');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
@@ -42,6 +44,7 @@ app.whenReady().then(() => {
   setupCategoriesHandlers();
   setupTransactionsHandlers();
   setupCreditCardsHandlers();
+  setupSettingsHandlers();
   
   createWindow();
 

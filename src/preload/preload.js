@@ -23,7 +23,13 @@ const IPC_CHANNELS = {
   CREDIT_CARD_TRANSACTIONS_ADD: 'credit_card_transactions:add',
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
   
-  DASHBOARD_STATS: 'dashboard:stats'
+  DASHBOARD_STATS: 'dashboard:stats',
+  
+  SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
+  SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
+  SETTINGS_GDRIVE_LOGOUT: 'settings:gdrive:logout',
+  SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
+  SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore'
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -50,5 +56,11 @@ contextBridge.exposeInMainWorld('api', {
     updateCreditCardTransaction: (id, tx) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_UPDATE, { id, tx }),
     deleteCreditCardTransaction: (id) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_DELETE, id),
     
-    getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate })
+    getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate }),
+
+    gdriveStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS),
+    gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),
+    gdriveLogout: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGOUT),
+    gdriveBackup: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_BACKUP),
+    gdriveRestore: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_RESTORE)
 });

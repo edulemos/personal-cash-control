@@ -3,8 +3,9 @@ import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
 import CreditCards from './pages/CreditCards';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
-import { LayoutDashboard, Receipt, Tags, CreditCard, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Tags, CreditCard, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 
 function App() {
@@ -91,6 +92,18 @@ function App() {
             <Tags size={20} />
             Categorias
           </button>
+          <button
+            onClick={() => setCurrentView('settings')}
+            className={clsx(
+              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium',
+              currentView === 'settings'
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-muted hover:bg-white/5 hover:text-white'
+            )}
+          >
+            <SettingsIcon size={20} />
+            Configurações
+          </button>
         </nav>
         
         <div className="p-4 border-t border-white/5">
@@ -128,6 +141,7 @@ function App() {
           {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
+          {currentView === 'settings' && <Settings />}
         </div>
       </main>
     </div>
