@@ -2,23 +2,31 @@ import React, { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Categories from './pages/Categories';
+import CreditCards from './pages/CreditCards';
 import Login from './pages/Login';
-import { LayoutDashboard, Receipt, Tags, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Tags, CreditCard, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 
 function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
   
-  // Período padrão: primeiro e último dia do mês corrente
-  const [startDate, setStartDate] = useState(() => {
+  // Mês global (formato YYYY-MM)
+  const [globalMonth, setGlobalMonth] = useState(() => {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [endDate, setEndDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-  });
+
+  // Calcula startDate e endDate derivados do mês global
+  const { startDate, endDate } = React.useMemo(() => {
+    const [year, month] = globalMonth.split('-').map(Number);
+    // Para resolver problemas de fuso horário, montamos a string direto
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    // Último dia do mês
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    return { startDate, endDate };
+  }, [globalMonth]);
 
   if (!user) {
     return <Login onLoginSuccess={setUser} />;
@@ -27,10 +35,7 @@ function App() {
   return (
     <div className="flex h-full w-full bg-bg-main text-white">
       {/* Sidebar */}
-      <aside className="w-64 bg-bg-card border-r border-white/5 flex flex-col">
-        <div className="top-bar flex items-center justify-center w-full">
-          {/* Drag area for OS */}
-        </div>
+      <aside className="w-64 bg-bg-card border-r border-white/5 flex flex-col pt-6">
         <div className="p-6 pb-2">
           <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-accent-hover">
             Cash Control
@@ -61,6 +66,18 @@ function App() {
           >
             <Receipt size={20} />
             Transações
+          </button>
+          <button
+            onClick={() => setCurrentView('credit_cards')}
+            className={clsx(
+              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium',
+              currentView === 'credit_cards'
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-muted hover:bg-white/5 hover:text-white'
+            )}
+          >
+            <CreditCard size={20} />
+            Cartões
           </button>
           <button
             onClick={() => setCurrentView('categories')}
@@ -96,21 +113,12 @@ function App() {
         <div className="top-bar w-full absolute top-0 left-0 z-10 flex items-center pl-8 pt-4">
           <div className="flex items-center gap-4" style={{ WebkitAppRegion: 'no-drag' }}>
             <label className="text-xs text-text-muted flex items-center gap-2">
-              De:
+              Mês de Referência:
               <input 
-                type="date" 
+                type="month" 
                 className="bg-black/20 border border-white/10 rounded px-2 py-1 text-white outline-none focus:border-accent"
-                value={startDate}
-                onChange={e => setStartDate(e.target.value)}
-              />
-            </label>
-            <label className="text-xs text-text-muted flex items-center gap-2">
-              Até:
-              <input 
-                type="date" 
-                className="bg-black/20 border border-white/10 rounded px-2 py-1 text-white outline-none focus:border-accent"
-                value={endDate}
-                onChange={e => setEndDate(e.target.value)}
+                value={globalMonth}
+                onChange={e => setGlobalMonth(e.target.value)}
               />
             </label>
           </div>
@@ -118,6 +126,7 @@ function App() {
         <div className="flex-1 overflow-auto p-8 pt-16">
           {currentView === 'dashboard' && <Dashboard userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
+          {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
         </div>
       </main>

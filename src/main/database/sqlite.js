@@ -61,6 +61,51 @@ const initDb = () => {
         // Atualiza as receitas para is_paid = 1 por padrão para não impactar saldo se aplicável
         db.exec(`UPDATE transactions SET is_paid = 1 WHERE type = 'income';`);
       }
+    },
+    {
+      id: 3,
+      name: '003_add_credit_cards',
+      up: () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS credit_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            due_day INTEGER NOT NULL,
+            closing_day INTEGER NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+          );
+          
+          CREATE TABLE IF NOT EXISTS credit_card_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            credit_card_id INTEGER NOT NULL,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            category_id INTEGER,
+            installments INTEGER DEFAULT 1,
+            installment_number INTEGER DEFAULT 1,
+            invoice_month TEXT NOT NULL,
+            FOREIGN KEY(credit_card_id) REFERENCES credit_cards(id),
+            FOREIGN KEY(category_id) REFERENCES categories(id)
+          );
+        `);
+      }
+    },
+    {
+      id: 4,
+      name: '004_add_credit_card_invoices',
+      up: () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS credit_card_invoices (
+            credit_card_id INTEGER NOT NULL,
+            invoice_month TEXT NOT NULL,
+            is_paid BOOLEAN DEFAULT 0,
+            PRIMARY KEY (credit_card_id, invoice_month),
+            FOREIGN KEY(credit_card_id) REFERENCES credit_cards(id)
+          );
+        `);
+      }
     }
   ];
 

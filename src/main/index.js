@@ -1,10 +1,13 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 const path = require('node:path');
 
 const createWindow = () => {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
   const win = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: Math.floor(width * 0.75),
+    height: Math.floor(height * 0.75),
     webPreferences: {
       preload: path.join(__dirname, '../preload/preload.js'),
       nodeIntegration: false,
@@ -30,6 +33,7 @@ const { initDb } = require('./database/sqlite');
 const { setupCategoriesHandlers } = require('./ipc/categories.ipc');
 const { setupTransactionsHandlers } = require('./ipc/transactions.ipc');
 const { setupAuthHandlers } = require('./ipc/auth.ipc');
+const { setupCreditCardsHandlers } = require('./ipc/creditCards.ipc');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
@@ -37,6 +41,7 @@ app.whenReady().then(() => {
   setupAuthHandlers();
   setupCategoriesHandlers();
   setupTransactionsHandlers();
+  setupCreditCardsHandlers();
   
   createWindow();
 

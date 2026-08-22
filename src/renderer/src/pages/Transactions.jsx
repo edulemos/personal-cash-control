@@ -157,7 +157,7 @@ export default function Transactions({ userId, startDate, endDate }) {
               ) : (
                 transactions.map((t) => (
                   <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                    <td className="p-4">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-4">{t.date.split('-').reverse().join('/')}</td>
                     <td className="p-4 font-medium flex items-center gap-2">
                       {t.description}
                       {t.is_fixed ? (

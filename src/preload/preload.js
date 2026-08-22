@@ -14,6 +14,15 @@ const IPC_CHANNELS = {
   TRANSACTIONS_UPDATE: 'transactions:update',
   TRANSACTIONS_DELETE: 'transactions:delete',
   
+  CREDIT_CARDS_GET: 'credit_cards:get',
+  CREDIT_CARDS_ADD: 'credit_cards:add',
+  CREDIT_CARDS_UPDATE: 'credit_cards:update',
+  CREDIT_CARDS_DELETE: 'credit_cards:delete',
+  
+  CREDIT_CARD_TRANSACTIONS_GET: 'credit_card_transactions:get',
+  CREDIT_CARD_TRANSACTIONS_ADD: 'credit_card_transactions:add',
+  CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
+  
   DASHBOARD_STATS: 'dashboard:stats'
 };
 
@@ -30,6 +39,16 @@ contextBridge.exposeInMainWorld('api', {
     addTransaction: (transaction) => ipcRenderer.invoke(IPC_CHANNELS.TRANSACTIONS_ADD, transaction),
     updateTransaction: (id, transaction) => ipcRenderer.invoke(IPC_CHANNELS.TRANSACTIONS_UPDATE, { id, transaction }),
     deleteTransaction: (id) => ipcRenderer.invoke(IPC_CHANNELS.TRANSACTIONS_DELETE, id),
+    
+    getCreditCards: (userId) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARDS_GET, userId),
+    addCreditCard: (card) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARDS_ADD, card),
+    updateCreditCard: (id, card) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARDS_UPDATE, { id, card }),
+    deleteCreditCard: (id) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARDS_DELETE, id),
+    
+    getCreditCardTransactions: (creditCardId, invoiceMonth) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_GET, { creditCardId, invoiceMonth }),
+    addCreditCardTransaction: (tx) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_ADD, tx),
+    updateCreditCardTransaction: (id, tx) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_UPDATE, { id, tx }),
+    deleteCreditCardTransaction: (id) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_DELETE, id),
     
     getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate })
 });
