@@ -62,5 +62,9 @@ contextBridge.exposeInMainWorld('api', {
     gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),
     gdriveLogout: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGOUT),
     gdriveBackup: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_BACKUP),
-    gdriveRestore: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_RESTORE)
+    gdriveRestore: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_RESTORE),
+
+    onUpdateAvailable: (callback) => ipcRenderer.on('updater:available', (_, info) => callback(info)),
+    onUpdateDownloaded: (callback) => ipcRenderer.on('updater:downloaded', (_, info) => callback(info)),
+    installUpdate: () => ipcRenderer.invoke('updater:restart')
 });

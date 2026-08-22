@@ -1,6 +1,7 @@
 const { app, BrowserWindow, screen } = require('electron');
 require('dotenv').config();
 const path = require('node:path');
+const { autoUpdater } = require('electron-updater');
 
 const createWindow = () => {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -26,7 +27,20 @@ const createWindow = () => {
     win.loadURL('http://localhost:5173');
     // win.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(__dirname, '../renderer/index.html'));
+    win.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
+  }
+
+  // Lógica do Auto-Updater
+  if (process.env.APP_ENV !== 'dev') {
+    autoUpdater.checkForUpdatesAndNotify();
+
+    autoUpdater.on('update-available', (info) => {
+      win.webContents.send('updater:available', info);
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      win.webContents.send('updater:downloaded', info);
+    });
   }
 };
 
@@ -45,8 +59,13 @@ app.whenReady().then(() => {
   setupTransactionsHandlers();
   setupCreditCardsHandlers();
   setupSettingsHandlers();
+
+  const { ipcMain } = require('electron');
+  ipcMain.handle('updater:restart', () => {
+    autoUpdater.quitAndInstall();
+  });
   
-  createWindow();
+  const win = createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

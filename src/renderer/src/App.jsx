@@ -11,12 +11,21 @@ import clsx from 'clsx';
 function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [updateStatus, setUpdateStatus] = useState(null);
   
   // Mês global (formato YYYY-MM)
   const [globalMonth, setGlobalMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  useEffect(() => {
+    // Configura listeners para auto-update se estiverem expostos no preload
+    if (window.api && window.api.onUpdateAvailable) {
+      window.api.onUpdateAvailable(() => setUpdateStatus('available'));
+      window.api.onUpdateDownloaded(() => setUpdateStatus('downloaded'));
+    }
+  }, []);
 
   // Calcula startDate e endDate derivados do mês global
   const { startDate, endDate } = React.useMemo(() => {
@@ -143,6 +152,28 @@ function App() {
           {currentView === 'categories' && <Categories userId={user.id} />}
           {currentView === 'settings' && <Settings />}
         </div>
+        
+        {/* Update Toast */}
+        {updateStatus && (
+          <div className="absolute bottom-8 right-8 bg-blue-500 text-white px-6 py-4 rounded-xl shadow-xl z-50 flex flex-col gap-2 max-w-sm">
+            <h3 className="font-bold text-lg">
+              {updateStatus === 'available' ? 'Baixando atualização...' : 'Atualização pronta!'}
+            </h3>
+            <p className="text-sm text-blue-100">
+              {updateStatus === 'available' 
+                ? 'Uma nova versão está sendo baixada em segundo plano.' 
+                : 'A nova versão já foi baixada. Clique abaixo para reiniciar e instalar.'}
+            </p>
+            {updateStatus === 'downloaded' && (
+              <button 
+                onClick={() => window.api.installUpdate()}
+                className="mt-2 bg-white text-blue-600 hover:bg-blue-50 font-semibold py-2 px-4 rounded-lg transition-colors"
+              >
+                Reiniciar e Instalar
+              </button>
+            )}
+          </div>
+        )}
       </main>
     </div>
   );

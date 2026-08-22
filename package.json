@@ -2,11 +2,13 @@
   "name": "personal-cash-control",
   "version": "1.0.0",
   "description": "Personal Cash Control with Electron",
+  "author": "Eduardo Lemos",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "dev": "node scripts/dev.mjs",
-    "test": "vitest run --root . tests/"
+    "test": "vitest run --root . tests/",
+    "build": "vite build && electron-builder --win -c electron-builder.yml"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
@@ -14,6 +16,7 @@
     "@vitejs/plugin-react": "^6.1.0",
     "autoprefixer": "^10.5.4",
     "electron": "^43.4.1",
+    "electron-builder": "^26.15.3",
     "postcss": "^8.5.26",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2",
