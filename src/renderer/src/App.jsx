@@ -12,6 +12,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
   const [updateStatus, setUpdateStatus] = useState(null);
+  const [appVersion, setAppVersion] = useState('');
   
   // Mês global (formato YYYY-MM)
   const [globalMonth, setGlobalMonth] = useState(() => {
@@ -20,6 +21,11 @@ function App() {
   });
 
   useEffect(() => {
+    // Busca a versão atual
+    if (window.api && window.api.getAppVersion) {
+      window.api.getAppVersion().then(version => setAppVersion(version));
+    }
+
     // Configura listeners para auto-update se estiverem expostos no preload
     if (window.api && window.api.onUpdateAvailable) {
       window.api.onUpdateAvailable(() => setUpdateStatus('available'));
@@ -122,11 +128,16 @@ function App() {
                 setUser(null);
                 setCurrentView('dashboard');
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:bg-white/5 hover:text-rose-400 transition-colors font-medium"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:bg-white/5 hover:text-rose-400 transition-colors font-medium mb-2"
             >
               <LogOut size={20} />
               Sair
             </button>
+            {appVersion && (
+              <div className="text-center text-xs text-white/30 font-medium">
+                v{appVersion}
+              </div>
+            )}
           </div>
       </aside>
 

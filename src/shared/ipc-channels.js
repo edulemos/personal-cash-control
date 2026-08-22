@@ -28,7 +28,9 @@ const IPC_CHANNELS = {
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
   SETTINGS_GDRIVE_LOGOUT: 'settings:gdrive:logout',
   SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
-  SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore'
+  SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore',
+  
+  APP_GET_VERSION: 'app:get_version'
 };
 
 module.exports = { IPC_CHANNELS };

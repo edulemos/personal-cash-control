@@ -11,7 +11,7 @@ files:
   - "package.json"
 win:
   target: nsis
-  icon: build/icon.ico # Opcional: crie um ícone futuramente
+  icon: build/icon.png
 nsis:
   oneClick: true
   perMachine: false

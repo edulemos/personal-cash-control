@@ -29,7 +29,8 @@ const IPC_CHANNELS = {
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
   SETTINGS_GDRIVE_LOGOUT: 'settings:gdrive:logout',
   SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
-  SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore'
+  SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore',
+  APP_GET_VERSION: 'app:get_version'
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -63,6 +64,8 @@ contextBridge.exposeInMainWorld('api', {
     gdriveLogout: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGOUT),
     gdriveBackup: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_BACKUP),
     gdriveRestore: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_RESTORE),
+
+    getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
 
     onUpdateAvailable: (callback) => ipcRenderer.on('updater:available', (_, info) => callback(info)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('updater:downloaded', (_, info) => callback(info)),

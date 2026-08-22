@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, User } from 'lucide-react';
+import logoImg from '../assets/logo.png';
 
 export default function Login({ onLoginSuccess }) {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -58,8 +59,20 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4">
-      <div className="glass-panel w-full max-w-md p-8 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Logo Superior Esquerda */}
+      <div className="absolute top-8 left-8 flex items-center gap-3 z-20">
+        <img 
+          src={logoImg} 
+          alt="Cash Control Logo" 
+          className="w-12 h-12 rounded-xl shadow-lg"
+        />
+        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-400">
+          Cash Control
+        </span>
+      </div>
+
+      <div className="glass-panel w-full max-w-md p-8 relative overflow-hidden z-10">
         {/* Decoração de fundo */}
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent/20 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>

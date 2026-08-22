@@ -15,6 +15,7 @@ const createWindow = () => {
       nodeIntegration: false,
       contextIsolation: true
     },
+    icon: path.join(__dirname, '../../build/icon.png'),
     // Modern frameless-like window
     titleBarStyle: 'hidden',
     titleBarOverlay: {
@@ -64,6 +65,7 @@ app.whenReady().then(() => {
   ipcMain.handle('updater:restart', () => {
     autoUpdater.quitAndInstall();
   });
+  ipcMain.handle('app:get_version', () => app.getVersion());
   
   const win = createWindow();
 
