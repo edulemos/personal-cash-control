@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import clsx from 'clsx';
 
 const formatCurrency = (value) => {
@@ -16,13 +16,15 @@ export default function Transactions({ userId, startDate, endDate }) {
   // Form state
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [form, setForm] = useState({ 
     description: '', 
     amount: '', 
     type: 'expense', 
     date: new Date().toISOString().split('T')[0], 
     category_id: '',
-    is_fixed: false
+    is_fixed: false,
+    is_paid: false
   });
 
   const fetchData = async () => {
@@ -52,7 +54,8 @@ export default function Transactions({ userId, startDate, endDate }) {
         // If no category selected, store null (allows FK to be optional)
         category_id: form.category_id ? Number(form.category_id) : null,
         // Ensure boolean value for fixed flag
-        is_fixed: !!form.is_fixed
+        is_fixed: !!form.is_fixed,
+        is_paid: !!form.is_paid
       };
 
       if (editingId) {
@@ -76,7 +79,8 @@ export default function Transactions({ userId, startDate, endDate }) {
       type: t.type,
       date: t.date,
       category_id: t.category_id,
-      is_fixed: t.is_fixed
+      is_fixed: !!t.is_fixed,
+      is_paid: !!t.is_paid
     });
     setEditingId(t.id);
     setShowModal(true);
@@ -85,13 +89,31 @@ export default function Transactions({ userId, startDate, endDate }) {
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
+    setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false, is_paid: false });
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('Tem certeza que deseja excluir?')) {
-      await window.api.deleteTransaction(id);
+  const confirmDelete = (id) => {
+    setDeletingId(id);
+  };
+
+  const executeDelete = async () => {
+    if (deletingId) {
+      await window.api.deleteTransaction(deletingId);
+      setDeletingId(null);
       fetchData();
+    }
+  };
+
+  const togglePaidStatus = async (t) => {
+    try {
+      const payload = {
+        ...t,
+        is_paid: !t.is_paid
+      };
+      await window.api.updateTransaction(t.id, payload);
+      fetchData();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -154,10 +176,15 @@ export default function Transactions({ userId, startDate, endDate }) {
                     </td>
                     <td className="p-4">
                       <div className="flex gap-2 justify-center">
+                        {t.type === 'expense' && (
+                          <button onClick={() => togglePaidStatus(t)} className={clsx("p-2 rounded-lg transition-colors", t.is_paid ? "text-emerald-400 hover:bg-white/5" : "text-text-muted hover:text-emerald-400 hover:bg-white/5")} title={t.is_paid ? "Marcar como pendente" : "Marcar como pago"}>
+                            {t.is_paid ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                          </button>
+                        )}
                         <button onClick={() => openEditModal(t)} className="p-2 text-text-muted hover:text-blue-400 hover:bg-white/5 rounded-lg transition-colors" title="Editar">
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                         </button>
-                        <button onClick={() => window.api.deleteTransaction(t.id).then(fetchData)} className="p-2 text-text-muted hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors" title="Excluir">
+                        <button onClick={() => confirmDelete(t.id)} className="p-2 text-text-muted hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors" title="Excluir">
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
                       </div>
@@ -169,6 +196,23 @@ export default function Transactions({ userId, startDate, endDate }) {
           </table>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {deletingId && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-sm p-6 relative overflow-hidden text-center">
+            <div className="w-16 h-16 bg-rose-500/10 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} />
+            </div>
+            <h2 className="text-xl font-bold mb-2">Excluir Transação</h2>
+            <p className="text-text-muted mb-6">Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.</p>
+            <div className="flex justify-center gap-3">
+              <button onClick={() => setDeletingId(null)} className="px-5 py-2 rounded-lg text-text-muted hover:bg-white/5 transition-colors font-medium">Cancelar</button>
+              <button onClick={executeDelete} className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2 rounded-lg font-medium transition-colors">Sim, Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Simples */}
       {showModal && (
@@ -199,6 +243,21 @@ export default function Transactions({ userId, startDate, endDate }) {
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+
+              {form.type === 'expense' && (
+                <label className="flex items-center gap-3 cursor-pointer p-3 border border-white/10 rounded-lg bg-black/20 hover:bg-white/5 transition-colors">
+                  <input 
+                    type="checkbox" 
+                    className="w-5 h-5 accent-emerald-500"
+                    checked={form.is_paid}
+                    onChange={e => setForm({...form, is_paid: e.target.checked})}
+                  />
+                  <div>
+                    <p className="font-medium">Despesa Paga</p>
+                    <p className="text-xs text-text-muted">Marque se esta despesa já foi paga</p>
+                  </div>
+                </label>
+              )}
 
               {!editingId && (
                 <label className="flex items-center gap-3 cursor-pointer p-3 border border-white/10 rounded-lg bg-black/20 hover:bg-white/5 transition-colors">

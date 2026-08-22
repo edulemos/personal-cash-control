@@ -11,15 +11,16 @@ const setupTransactionsHandlers = () => {
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.id
       WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
-      ORDER BY t.date DESC
+      ORDER BY t.date ASC
     `);
     return stmt.all(userId, startDate, endDate);
   });
 
-  ipcMain.handle(IPC_CHANNELS.TRANSACTIONS_ADD, (event, { user_id, description, amount, type, date, category_id, is_fixed }) => {
+  ipcMain.handle(IPC_CHANNELS.TRANSACTIONS_ADD, (event, { user_id, description, amount, type, date, category_id, is_fixed, is_paid }) => {
     const db = getDb();
     const isFixedVal = is_fixed ? 1 : 0;
-    const stmt = db.prepare('INSERT INTO transactions (user_id, description, amount, type, date, category_id, is_fixed) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const isPaidVal = is_paid !== undefined ? (is_paid ? 1 : 0) : (type === 'income' ? 1 : 0);
+    const stmt = db.prepare('INSERT INTO transactions (user_id, description, amount, type, date, category_id, is_fixed, is_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     
     let firstId = null;
     
@@ -34,7 +35,7 @@ const setupTransactionsHandlers = () => {
         // Formata YYYY-MM-DD garantindo 2 dígitos
         const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         
-        const info = stmt.run(user_id, description, amount, type, formattedDate, category_id, isFixedVal);
+        const info = stmt.run(user_id, description, amount, type, formattedDate, category_id, isFixedVal, isPaidVal);
         if (i === 0) firstId = Number(info.lastInsertRowid);
         
         // Adiciona 1 mês matematicamente
@@ -52,9 +53,13 @@ const setupTransactionsHandlers = () => {
 
   ipcMain.handle(IPC_CHANNELS.TRANSACTIONS_UPDATE, (event, { id, transaction }) => {
     const db = getDb();
-    const stmt = db.prepare('UPDATE transactions SET description = ?, amount = ?, type = ?, date = ?, category_id = ?, is_fixed = ? WHERE id = ?');
+    const stmt = db.prepare('UPDATE transactions SET description = ?, amount = ?, type = ?, date = ?, category_id = ?, is_fixed = ?, is_paid = ? WHERE id = ?');
     console.log('Received update for id', id, 'payload', transaction);
-    stmt.run(transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category_id, transaction.is_fixed ? 1 : 0, id);
+    
+    // Mantém is_paid se não for fornecido explicitamente na edição
+    const isPaidVal = transaction.is_paid !== undefined ? (transaction.is_paid ? 1 : 0) : 0;
+    
+    stmt.run(transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category_id, transaction.is_fixed ? 1 : 0, isPaidVal, id);
     return { success: true };
   });
 
@@ -68,7 +73,7 @@ const setupTransactionsHandlers = () => {
   ipcMain.handle(IPC_CHANNELS.DASHBOARD_STATS, (event, { userId, startDate, endDate }) => {
     const db = getDb();
     const stmt = db.prepare(`
-      SELECT amount, type FROM transactions
+      SELECT amount, type, is_paid FROM transactions
       WHERE user_id = ? AND date >= ? AND date <= ?
     `);
     const transactions = stmt.all(userId, startDate, endDate);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Wallet } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock } from 'lucide-react';
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -9,7 +9,7 @@ const formatCurrency = (value) => {
 };
 
 export default function Dashboard({ userId, startDate, endDate }) {
-  const [stats, setStats] = useState({ income: 0, expense: 0, balance: 0 });
+  const [stats, setStats] = useState({ income: 0, expensePaid: 0, expensePending: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
@@ -38,7 +38,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
         <p className="text-text-muted">Visão geral das suas finanças</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Card Saldo */}
         <div className="glass-panel p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
@@ -57,13 +57,22 @@ export default function Dashboard({ userId, startDate, endDate }) {
           <p className="text-3xl font-bold">{formatCurrency(stats.income)}</p>
         </div>
 
-        {/* Card Despesas */}
+        {/* Card Despesas Pagas */}
         <div className="glass-panel p-6 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium">Despesas</h3>
+            <h3 className="text-text-muted font-medium">Despesas (Pagas)</h3>
             <ArrowDownCircle className="text-rose-400" size={24} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.expense)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(stats.expensePaid)}</p>
+        </div>
+
+        {/* Card Despesas Pendentes */}
+        <div className="glass-panel p-6 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-text-muted font-medium">Despesas (Pendentes)</h3>
+            <Clock className="text-amber-400" size={24} />
+          </div>
+          <p className="text-3xl font-bold">{formatCurrency(stats.expensePending)}</p>
         </div>
       </div>
 

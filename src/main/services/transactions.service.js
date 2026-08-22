@@ -4,7 +4,7 @@
  * @returns {Object} { income, expense, balance }
  */
 const calculateDashboardStats = (transactions) => {
-  if (!Array.isArray(transactions)) return { income: 0, expense: 0, balance: 0 };
+  if (!Array.isArray(transactions)) return { income: 0, expensePaid: 0, expensePending: 0, balance: 0 };
   
   return transactions.reduce((acc, curr) => {
     // Garantir precisão decimal simples e evitar strings
@@ -14,12 +14,16 @@ const calculateDashboardStats = (transactions) => {
       acc.income += amount;
       acc.balance += amount;
     } else if (curr.type === 'expense') {
-      acc.expense += amount;
-      acc.balance -= amount;
+      if (curr.is_paid) {
+        acc.expensePaid += amount;
+        acc.balance -= amount;
+      } else {
+        acc.expensePending += amount;
+      }
     }
     
     return acc;
-  }, { income: 0, expense: 0, balance: 0 });
+  }, { income: 0, expensePaid: 0, expensePending: 0, balance: 0 });
 };
 
 module.exports = { calculateDashboardStats };
