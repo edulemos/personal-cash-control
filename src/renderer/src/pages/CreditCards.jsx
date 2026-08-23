@@ -12,6 +12,7 @@ export default function CreditCards({ userId, globalMonth }) {
   
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
   const [showCardModal, setShowCardModal] = useState(false);
@@ -110,6 +111,15 @@ export default function CreditCards({ userId, globalMonth }) {
 
   const totalInvoice = transactions.reduce((acc, t) => acc + t.amount, 0);
 
+  const filteredTransactions = transactions.filter(t => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    const descMatch = t.description.toLowerCase().includes(search);
+    const categoryName = categories.find(c => c.id === t.category_id)?.name || 'Geral';
+    const catMatch = categoryName.toLowerCase().includes(search);
+    return descMatch || catMatch;
+  });
+
   return (
     <div className="flex flex-col h-full gap-6">
       <header className="flex justify-between items-end">
@@ -165,16 +175,28 @@ export default function CreditCards({ userId, globalMonth }) {
             
             <div className="p-4 border-b border-white/5 flex justify-between items-center">
               <span className="font-medium">Lançamentos</span>
-              <button 
-                onClick={() => {
-                  setEditingTxId(null);
-                  setTxForm({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1 });
-                  setShowTxModal(true);
-                }} 
-                className="text-accent hover:text-accent-hover text-sm font-medium flex items-center gap-1"
-              >
-                <Plus size={16} /> Lançar Compra
-              </button>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <input 
+                    type="text" 
+                    placeholder="Pesquisar..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-sm text-white outline-none focus:border-accent w-48 transition-colors"
+                  />
+                </div>
+                <button 
+                  onClick={() => {
+                    setEditingTxId(null);
+                    setTxForm({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1 });
+                    setShowTxModal(true);
+                  }} 
+                  className="text-accent hover:text-accent-hover text-sm font-medium flex items-center gap-1"
+                >
+                  <Plus size={16} /> Lançar Compra
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-auto">
@@ -189,10 +211,10 @@ export default function CreditCards({ userId, globalMonth }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.length === 0 ? (
-                    <tr><td colSpan="5" className="p-8 text-center text-text-muted">Nenhum lançamento nesta fatura.</td></tr>
+                  {filteredTransactions.length === 0 ? (
+                    <tr><td colSpan="5" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td></tr>
                   ) : (
-                    transactions.map(t => (
+                    filteredTransactions.map(t => (
                       <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                         <td className="p-4">{t.date.split('-').reverse().join('/')}</td>
                         <td className="p-4 font-medium">{t.description}</td>

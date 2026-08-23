@@ -33,7 +33,8 @@ const createWindow = () => {
 
   // Lógica do Auto-Updater
   if (process.env.APP_ENV !== 'dev') {
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.autoDownload = false;
+    autoUpdater.checkForUpdates();
 
     autoUpdater.on('update-available', (info) => {
       win.webContents.send('updater:available', info);
@@ -41,6 +42,10 @@ const createWindow = () => {
 
     autoUpdater.on('update-downloaded', (info) => {
       win.webContents.send('updater:downloaded', info);
+    });
+
+    autoUpdater.on('error', (err) => {
+      win.webContents.send('updater:error', err.message);
     });
   }
 };
@@ -64,6 +69,12 @@ app.whenReady().then(() => {
   const { ipcMain } = require('electron');
   ipcMain.handle('updater:restart', () => {
     autoUpdater.quitAndInstall();
+  });
+  ipcMain.handle('updater:download', () => {
+    autoUpdater.downloadUpdate();
+  });
+  ipcMain.handle('updater:check', () => {
+    autoUpdater.checkForUpdates();
   });
   ipcMain.handle('app:get_version', () => app.getVersion());
   

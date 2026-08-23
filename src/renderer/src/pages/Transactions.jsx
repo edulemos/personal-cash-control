@@ -12,6 +12,7 @@ const formatCurrency = (value) => {
 export default function Transactions({ userId, startDate, endDate }) {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Form state
   const [showModal, setShowModal] = useState(false);
@@ -117,6 +118,14 @@ export default function Transactions({ userId, startDate, endDate }) {
     }
   };
 
+  const filteredTransactions = transactions.filter(t => {
+    if (!searchTerm) return true;
+    const search = searchTerm.toLowerCase();
+    const descMatch = t.description.toLowerCase().includes(search);
+    const catMatch = (t.category_name || 'Geral').toLowerCase().includes(search);
+    return descMatch || catMatch;
+  });
+
   return (
     <div className="space-y-6 h-full flex flex-col">
       <header className="flex items-center justify-between">
@@ -124,17 +133,29 @@ export default function Transactions({ userId, startDate, endDate }) {
           <h2 className="text-2xl font-bold">Transações</h2>
           <p className="text-text-muted">Gerencie suas receitas e despesas</p>
         </div>
-        <button 
-            onClick={() => {
-              setEditingId(null);
-              setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
-              setShowModal(true);
-            }} 
-            className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
-          >
-          <Plus size={20} />
-          Nova Transação
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input 
+              type="text" 
+              placeholder="Pesquisar..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white outline-none focus:border-accent w-64 transition-colors"
+            />
+          </div>
+          <button 
+              onClick={() => {
+                setEditingId(null);
+                setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
+                setShowModal(true);
+              }} 
+              className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
+            >
+            <Plus size={20} />
+            Nova Transação
+          </button>
+        </div>
       </header>
 
       <div className="glass-panel flex-1 overflow-hidden flex flex-col">
@@ -150,12 +171,12 @@ export default function Transactions({ userId, startDate, endDate }) {
               </tr>
             </thead>
             <tbody>
-              {transactions.length === 0 ? (
+              {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-text-muted">Nenhuma transação encontrada neste mês.</td>
+                  <td colSpan="5" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td>
                 </tr>
               ) : (
-                transactions.map((t) => (
+                filteredTransactions.map((t) => (
                   <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
                     <td className="p-4">{t.date.split('-').reverse().join('/')}</td>
                     <td className="p-4 font-medium flex items-center gap-2">
@@ -185,7 +206,7 @@ export default function Transactions({ userId, startDate, endDate }) {
                           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                         </button>
                         <button onClick={() => confirmDelete(t.id)} className="p-2 text-text-muted hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors" title="Excluir">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"/></svg>
                         </button>
                       </div>
                     </td>

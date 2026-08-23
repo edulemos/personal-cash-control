@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogIn, LogOut, Loader2, AlertTriangle } from 'lucide-react';
+import { Cloud, Download, Upload, LogIn, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 
-export default function Settings() {
+export default function Settings({ updateStatus, setUpdateStatus, appVersion }) {
   const [gdriveStatus, setGdriveStatus] = useState({ isAuthenticated: false, email: null, lastBackup: null });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -199,6 +199,85 @@ export default function Settings() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Seção de Atualizações */}
+      <div className="glass-panel p-8 max-w-3xl mb-8">
+        <div className="flex items-start gap-4 mb-8">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+            <RefreshCw size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold">Atualizações</h3>
+            <p className="text-text-muted mt-1 text-sm">
+              Mantenha seu aplicativo na versão mais recente para receber novos recursos e correções.
+              {appVersion && <span className="block mt-1">Versão atual: <strong className="text-white">v{appVersion}</strong></span>}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          {!updateStatus ? (
+             <div className="flex flex-col items-center justify-center text-center">
+                <CheckCircle2 size={32} className="text-emerald-400 mb-3" />
+                <h4 className="font-semibold mb-1">Seu aplicativo está atualizado</h4>
+                <p className="text-sm text-text-muted mb-4">Ou não verificamos recentemente.</p>
+                <button 
+                  onClick={() => window.api.checkUpdate()}
+                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Verificar Atualizações
+                </button>
+             </div>
+          ) : updateStatus === 'available' ? (
+             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+               <div>
+                 <h4 className="font-semibold text-blue-400 mb-1">Nova atualização disponível!</h4>
+                 <p className="text-sm text-text-muted">Baixe agora para aproveitar as novidades.</p>
+               </div>
+               <button 
+                  onClick={() => {
+                    setUpdateStatus('downloading');
+                    window.api.downloadUpdate();
+                  }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg font-medium transition-colors whitespace-nowrap"
+                >
+                  Baixar Atualização
+                </button>
+             </div>
+          ) : updateStatus === 'downloading' ? (
+             <div className="flex flex-col items-center justify-center text-center">
+                <Loader2 size={32} className="text-blue-400 animate-spin mb-3" />
+                <h4 className="font-semibold mb-1">Baixando atualização...</h4>
+                <p className="text-sm text-text-muted">Isso pode levar alguns minutos. Você será avisado quando terminar.</p>
+             </div>
+          ) : updateStatus === 'downloaded' ? (
+             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+               <div>
+                 <h4 className="font-semibold text-emerald-400 mb-1">Atualização pronta!</h4>
+                 <p className="text-sm text-text-muted">Reinicie o aplicativo para instalar a nova versão.</p>
+               </div>
+               <button 
+                  onClick={() => window.api.installUpdate()}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-medium transition-colors whitespace-nowrap"
+                >
+                  Reiniciar e Instalar
+                </button>
+             </div>
+          ) : updateStatus === 'error' ? (
+             <div className="flex flex-col items-center justify-center text-center">
+                <AlertTriangle size={32} className="text-rose-400 mb-3" />
+                <h4 className="font-semibold mb-1">Erro ao atualizar</h4>
+                <p className="text-sm text-text-muted mb-4">Ocorreu um problema ao baixar ou verificar a atualização.</p>
+                <button 
+                  onClick={() => setUpdateStatus(null)}
+                  className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Tentar Novamente
+                </button>
+             </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );

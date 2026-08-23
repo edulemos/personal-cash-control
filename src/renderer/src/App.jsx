@@ -30,6 +30,12 @@ function App() {
     if (window.api && window.api.onUpdateAvailable) {
       window.api.onUpdateAvailable(() => setUpdateStatus('available'));
       window.api.onUpdateDownloaded(() => setUpdateStatus('downloaded'));
+      if (window.api.onUpdateError) {
+        window.api.onUpdateError((err) => {
+          console.error('Update error:', err);
+          setUpdateStatus('error');
+        });
+      }
     }
   }, []);
 
@@ -110,7 +116,7 @@ function App() {
           <button
             onClick={() => setCurrentView('settings')}
             className={clsx(
-              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium',
+              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium relative',
               currentView === 'settings'
                 ? 'bg-accent/10 text-accent'
                 : 'text-text-muted hover:bg-white/5 hover:text-white'
@@ -118,6 +124,9 @@ function App() {
           >
             <SettingsIcon size={20} />
             Configurações
+            {updateStatus && updateStatus !== 'error' && (
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_rgba(244,63,94,0.8)]"></span>
+            )}
           </button>
         </nav>
         
@@ -161,30 +170,9 @@ function App() {
           {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
-          {currentView === 'settings' && <Settings />}
+          {currentView === 'settings' && <Settings updateStatus={updateStatus} setUpdateStatus={setUpdateStatus} appVersion={appVersion} />}
         </div>
         
-        {/* Update Toast */}
-        {updateStatus && (
-          <div className="absolute bottom-8 right-8 bg-blue-500 text-white px-6 py-4 rounded-xl shadow-xl z-50 flex flex-col gap-2 max-w-sm">
-            <h3 className="font-bold text-lg">
-              {updateStatus === 'available' ? 'Baixando atualização...' : 'Atualização pronta!'}
-            </h3>
-            <p className="text-sm text-blue-100">
-              {updateStatus === 'available' 
-                ? 'Uma nova versão está sendo baixada em segundo plano.' 
-                : 'A nova versão já foi baixada. Clique abaixo para reiniciar e instalar.'}
-            </p>
-            {updateStatus === 'downloaded' && (
-              <button 
-                onClick={() => window.api.installUpdate()}
-                className="mt-2 bg-white text-blue-600 hover:bg-blue-50 font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                Reiniciar e Instalar
-              </button>
-            )}
-          </div>
-        )}
       </main>
     </div>
   );
