@@ -1,6 +1,7 @@
 const IPC_CHANNELS = {
   AUTH_LOGIN: 'auth:login',
   AUTH_REGISTER: 'auth:register',
+  AUTH_UPDATE_PROFILE: 'auth:update_profile',
   
   CATEGORIES_GET: 'categories:get',
   CATEGORIES_ADD: 'categories:add',

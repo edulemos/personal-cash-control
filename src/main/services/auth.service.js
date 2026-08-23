@@ -113,7 +113,54 @@ async function loginUser(username, password) {
   };
 }
 
+/**
+ * Atualiza o perfil do usuário.
+ * @param {number} userId ID do usuário.
+ * @param {Object} data Dados para atualizar (name, username, newPassword, currentPassword).
+ * @returns {Promise<Object>} Usuário atualizado.
+ */
+async function updateUserProfile(userId, { name, username, newPassword, currentPassword }) {
+  const db = getDb();
+  
+  const stmt = db.prepare('SELECT id, name, username, password_hash, salt FROM users WHERE id = ?');
+  const user = stmt.get(userId);
+  if (!user) throw new Error('Usuário não encontrado.');
+
+  // Check current password
+  const isValid = await verifyPassword(currentPassword, user.password_hash, user.salt);
+  if (!isValid) throw new Error('Senha atual incorreta.');
+
+  // Check if new username is taken by someone else
+  if (username && username !== user.username) {
+    const stmtCheck = db.prepare('SELECT id FROM users WHERE username = ?');
+    if (stmtCheck.get(username)) {
+      throw new Error('Nome de usuário já está em uso.');
+    }
+  }
+
+  let query = 'UPDATE users SET name = ?, username = ?';
+  let params = [name || user.name, username || user.username];
+
+  if (newPassword) {
+    const { hash, salt } = await hashPassword(newPassword);
+    query += ', password_hash = ?, salt = ?';
+    params.push(hash, salt);
+  }
+  
+  query += ' WHERE id = ?';
+  params.push(userId);
+
+  db.prepare(query).run(...params);
+
+  return {
+    id: userId,
+    name: name || user.name,
+    username: username || user.username
+  };
+}
+
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  updateUserProfile
 };

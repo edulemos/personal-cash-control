@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogIn, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Cloud, Download, Upload, LogIn, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, User } from 'lucide-react';
 import clsx from 'clsx';
 
-export default function Settings({ updateStatus, setUpdateStatus, appVersion }) {
+export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
   const [gdriveStatus, setGdriveStatus] = useState({ isAuthenticated: false, email: null, lastBackup: null });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+
+  // Profile State
+  const [profileForm, setProfileForm] = useState({ name: user?.name || '', username: user?.username || '', currentPassword: '', newPassword: '' });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+  const [profileSuccess, setProfileSuccess] = useState(null);
 
   useEffect(() => {
     fetchStatus();
@@ -22,6 +28,33 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion }) 
       setError('Não foi possível verificar o status do Google Drive.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    if (!profileForm.currentPassword) {
+      setProfileError('A senha atual é obrigatória para salvar as alterações.');
+      return;
+    }
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileSuccess(null);
+    try {
+      const result = await window.api.updateProfile(user.id, profileForm);
+      if (result.success) {
+        setProfileSuccess('Perfil atualizado com sucesso!');
+        setUser(result.user);
+        // Atualiza localStorage se usarmos cashControlUser
+        localStorage.setItem('cashControlUser', JSON.stringify(result.user));
+        setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '' }));
+      } else {
+        setProfileError(result.message || 'Erro ao atualizar perfil.');
+      }
+    } catch (err) {
+      setProfileError('Ocorreu um erro inesperado.');
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -107,6 +140,68 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion }) 
         <h2 className="text-2xl font-bold">Configurações</h2>
         <p className="text-text-muted">Ajustes e backup do sistema</p>
       </header>
+
+      {/* Seção de Perfil */}
+      <div className="glass-panel p-8 max-w-3xl mb-8">
+        <div className="flex items-start gap-4 mb-8">
+          <div className="w-12 h-12 rounded-xl bg-accent/20 text-accent flex items-center justify-center shrink-0">
+            <User size={24} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-semibold">Editar Perfil</h3>
+            <p className="text-text-muted mt-1 text-sm">
+              Altere seu nome, nome de usuário ou senha de acesso.
+            </p>
+          </div>
+        </div>
+
+        {profileError && (
+          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl mb-6 flex gap-3 text-sm">
+            <AlertTriangle size={18} className="shrink-0" />
+            <p>{profileError}</p>
+          </div>
+        )}
+
+        {profileSuccess && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl mb-6 text-sm">
+            {profileSuccess}
+          </div>
+        )}
+
+        <form onSubmit={handleProfileSubmit} className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-text-muted mb-1 block">Nome</label>
+              <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} required />
+            </div>
+            <div>
+              <label className="text-xs text-text-muted mb-1 block">Nome de Usuário</label>
+              <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.username} onChange={e => setProfileForm({...profileForm, username: e.target.value})} required />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
+            <div>
+              <label className="text-xs text-text-muted mb-1 block">Nova Senha (opcional)</label>
+              <input type="password" placeholder="Deixe em branco para não alterar" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.newPassword} onChange={e => setProfileForm({...profileForm, newPassword: e.target.value})} />
+            </div>
+            <div>
+              <label className="text-xs text-rose-400 mb-1 block">Senha Atual (obrigatória para salvar)</label>
+              <input type="password" placeholder="Sua senha atual" className="w-full bg-black/30 border border-rose-500/30 rounded-lg p-3 outline-none focus:border-rose-500 text-white" value={profileForm.currentPassword} onChange={e => setProfileForm({...profileForm, currentPassword: e.target.value})} required />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button 
+              type="submit"
+              disabled={profileLoading}
+              className="bg-accent hover:bg-accent-hover text-white px-6 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50"
+            >
+              {profileLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar Alterações'}
+            </button>
+          </div>
+        </form>
+      </div>
 
       <div className="glass-panel p-8 max-w-3xl">
         <div className="flex items-start gap-4 mb-8">

@@ -170,7 +170,7 @@ function App() {
           {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
-          {currentView === 'settings' && <Settings updateStatus={updateStatus} setUpdateStatus={setUpdateStatus} appVersion={appVersion} />}
+          {currentView === 'settings' && <Settings updateStatus={updateStatus} setUpdateStatus={setUpdateStatus} appVersion={appVersion} user={user} setUser={setUser} />}
         </div>
         
       </main>
