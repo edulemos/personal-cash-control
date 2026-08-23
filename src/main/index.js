@@ -2,6 +2,10 @@ const { app, BrowserWindow, screen } = require('electron');
 require('dotenv').config();
 const path = require('node:path');
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
+
+log.transports.file.level = 'info';
+autoUpdater.logger = log;
 
 const createWindow = () => {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -45,6 +49,7 @@ const createWindow = () => {
     });
 
     autoUpdater.on('error', (err) => {
+      log.error('Error on autoUpdater:', err);
       win.webContents.send('updater:error', err.message);
     });
   }
