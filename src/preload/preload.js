@@ -24,6 +24,7 @@ const IPC_CHANNELS = {
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
   
   DASHBOARD_STATS: 'dashboard:stats',
+  DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
   
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
@@ -59,6 +60,7 @@ contextBridge.exposeInMainWorld('api', {
     deleteCreditCardTransaction: (id) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_DELETE, id),
     
     getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate }),
+    getCategoryExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSES, { userId, startDate, endDate }),
 
     gdriveStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS),
     gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),

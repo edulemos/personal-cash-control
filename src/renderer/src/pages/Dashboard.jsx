@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock, TrendingUp, TrendingDown } from 'lucide-react';
+import ExpensesByCategoryChart from '../components/ExpensesByCategoryChart';
 
 const formatCurrency = (value) => {
   const num = Number(value);
@@ -10,7 +11,8 @@ const formatCurrency = (value) => {
 };
 
 export default function Dashboard({ userId, startDate, endDate }) {
-  const [stats, setStats] = useState({ income: 0, expensePaid: 0, expensePending: 0, balance: 0 });
+  const [stats, setStats] = useState({ income: 0, expensePaid: 0, expensePending: 0, balance: 0, netBalance: 0 });
+  const [categoryData, setCategoryData] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchStats = async () => {
@@ -22,9 +24,12 @@ export default function Dashboard({ userId, startDate, endDate }) {
             income: Number(result.income) || 0,
             expensePaid: Number(result.expensePaid) || 0,
             expensePending: Number(result.expensePending) || 0,
-            balance: Number(result.balance) || 0
+            balance: Number(result.balance) || 0,
+            netBalance: Number(result.netBalance) || 0
           });
         }
+        const cats = await window.api.getCategoryExpenses(userId, startDate, endDate);
+        if (Array.isArray(cats)) setCategoryData(cats);
       }
     } catch (error) {
       console.error('Erro ao buscar stats do dashboard:', error);
@@ -48,47 +53,68 @@ export default function Dashboard({ userId, startDate, endDate }) {
         <p className="text-text-muted">Visão geral das suas finanças</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {/* Card Saldo */}
-        <div className="glass-panel p-6 flex flex-col gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Card Saldo Total */}
+        <div className="glass-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium">Saldo Total</h3>
-            <Wallet className="text-accent" size={24} />
+            <h3 className="text-text-muted font-medium text-sm">Saldo Total</h3>
+            <Wallet className="text-accent flex-shrink-0" size={20} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats?.balance)}</p>
+          <p className="text-xl font-bold truncate">{formatCurrency(stats?.balance)}</p>
+        </div>
+
+        {/* Card Saldo Real */}
+        <div className={`glass-panel p-4 flex flex-col gap-3 border col-span-2 lg:col-span-1 ${
+          stats?.netBalance >= 0
+            ? 'border-emerald-500/30 bg-emerald-500/5'
+            : 'border-rose-500/30 bg-rose-500/5'
+        }`}>
+          <div className="flex items-center justify-between">
+            <h3 className="text-text-muted font-medium text-sm">Saldo Real</h3>
+            {stats?.netBalance >= 0
+              ? <TrendingUp className="text-emerald-400 flex-shrink-0" size={20} />
+              : <TrendingDown className="text-rose-400 flex-shrink-0" size={20} />
+            }
+          </div>
+          <p className={`text-xl font-bold truncate ${
+            stats?.netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          }`}>
+            {formatCurrency(stats?.netBalance)}
+          </p>
+          <p className="text-xs text-text-muted -mt-1">Receitas − tudo a pagar</p>
         </div>
 
         {/* Card Receitas */}
-        <div className="glass-panel p-6 flex flex-col gap-4">
+        <div className="glass-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium">Receitas</h3>
-            <ArrowUpCircle className="text-emerald-400" size={24} />
+            <h3 className="text-text-muted font-medium text-sm">Receitas</h3>
+            <ArrowUpCircle className="text-emerald-400 flex-shrink-0" size={20} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats?.income)}</p>
+          <p className="text-xl font-bold truncate">{formatCurrency(stats?.income)}</p>
         </div>
 
         {/* Card Despesas Pagas */}
-        <div className="glass-panel p-6 flex flex-col gap-4">
+        <div className="glass-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium">Despesas (Pagas)</h3>
-            <ArrowDownCircle className="text-rose-400" size={24} />
+            <h3 className="text-text-muted font-medium text-sm">Desp. Pagas</h3>
+            <ArrowDownCircle className="text-rose-400 flex-shrink-0" size={20} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats?.expensePaid)}</p>
+          <p className="text-xl font-bold truncate">{formatCurrency(stats?.expensePaid)}</p>
         </div>
 
         {/* Card Despesas Pendentes */}
-        <div className="glass-panel p-6 flex flex-col gap-4">
+        <div className="glass-panel p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium">Despesas (Pendentes)</h3>
-            <Clock className="text-amber-400" size={24} />
+            <h3 className="text-text-muted font-medium text-sm">Desp. Pendentes</h3>
+            <Clock className="text-amber-400 flex-shrink-0" size={20} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats?.expensePending)}</p>
+          <p className="text-xl font-bold truncate">{formatCurrency(stats?.expensePending)}</p>
         </div>
       </div>
 
-      {/* Espaço para Gráficos Futuros */}
-      <div className="glass-panel p-6 min-h-[300px] flex items-center justify-center">
-        <p className="text-text-muted">Área reservada para gráficos (Recharts / Chart.js)</p>
+      {/* Gráfico de Despesas por Categoria */}
+      <div className="glass-panel p-6 min-h-[300px]">
+        <ExpensesByCategoryChart categoryData={categoryData} />
       </div>
     </div>
   );

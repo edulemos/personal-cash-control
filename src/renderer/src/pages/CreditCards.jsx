@@ -215,6 +215,7 @@ export default function CreditCards({ userId, globalMonth }) {
                   <tr className="text-text-muted border-b border-white/5 bg-black/20">
                     <th className="p-4 font-medium">Data Compra</th>
                     <th className="p-4 font-medium">Descrição</th>
+                    <th className="p-4 font-medium">Categoria</th>
                     <th className="p-4 font-medium">Parcela</th>
                     <th className="p-4 font-medium text-right">Valor</th>
                     <th className="p-4 font-medium w-16"></th>
@@ -222,12 +223,20 @@ export default function CreditCards({ userId, globalMonth }) {
                 </thead>
                 <tbody>
                   {filteredTransactions.length === 0 ? (
-                    <tr><td colSpan="5" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td></tr>
+                    <tr><td colSpan="6" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td></tr>
                   ) : (
                     filteredTransactions.map(t => (
                       <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                         <td className="p-4">{t.date.split('-').reverse().join('/')}</td>
                         <td className="p-4 font-medium">{t.description}</td>
+                        <td className="p-4">
+                          <span
+                            className="px-2.5 py-1 rounded-full text-xs font-medium bg-white/10"
+                            style={{ color: t.category_color || '#94a3b8' }}
+                          >
+                            {t.category_name || 'Geral'}
+                          </span>
+                        </td>
                         <td className="p-4">{t.installments > 1 ? `${t.installment_number}/${t.installments}` : 'À vista'}</td>
                         <td className="p-4 text-right text-rose-300 font-medium">{formatCurrency(t.amount)}</td>
                         <td className="p-4">

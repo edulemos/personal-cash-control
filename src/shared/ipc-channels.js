@@ -23,6 +23,7 @@ const IPC_CHANNELS = {
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
   
   DASHBOARD_STATS: 'dashboard:stats',
+  DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
 
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',

@@ -212,6 +212,75 @@ const setupTransactionsHandlers = () => {
       return { income: 0, expensePaid: 0, expensePending: 0, balance: 0 };
     }
   });
+
+  // Retorna despesas agrupadas por categoria, expandindo faturas de cartão nas suas subcategorias
+  ipcMain.handle(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSES, (event, { userId, startDate, endDate }) => {
+    try {
+      if (!userId || !startDate || !endDate) return [];
+      const db = getDb();
+
+      // 1. Despesas normais (excluindo faturas de cartão — elas vêm da tabela separada)
+      const normalStmt = db.prepare(`
+        SELECT c.name as category_name, c.color as category_color, SUM(t.amount) as total
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE t.user_id = ? AND t.type = 'expense' AND t.date >= ? AND t.date <= ?
+        GROUP BY COALESCE(c.name, 'Geral')
+      `);
+      const normalRows = normalStmt.all(userId, startDate, endDate) || [];
+
+      // Monta mapa: category_name -> { total, color }
+      const map = {};
+      normalRows.forEach(row => {
+        const key = row.category_name || 'Geral';
+        map[key] = { name: key, value: Number(row.total) || 0, color: row.category_color };
+      });
+
+      // 2. Determina os invoice_months no período
+      const invoiceMonths = [];
+      let [y, m] = startDate.split('-').map(Number);
+      const [ey, em] = endDate.split('-').map(Number);
+      while (y < ey || (y === ey && m <= em)) {
+        invoiceMonths.push(`${y}-${String(m).padStart(2, '0')}`);
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+
+      // 3. Busca sub-transações de cartão agrupadas por categoria
+      if (invoiceMonths.length > 0) {
+        try {
+          const cardStmt = db.prepare(`
+            SELECT c.name as category_name, c.color as category_color, SUM(t.amount) as total
+            FROM credit_card_transactions t
+            JOIN credit_cards cc ON t.credit_card_id = cc.id
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE cc.user_id = ? AND t.invoice_month IN (${invoiceMonths.map(() => '?').join(',')})
+            GROUP BY COALESCE(c.name, 'Geral')
+          `);
+          const cardRows = cardStmt.all(userId, ...invoiceMonths) || [];
+
+          cardRows.forEach(row => {
+            const key = row.category_name || 'Geral';
+            if (map[key]) {
+              map[key].value += Number(row.total) || 0;
+            } else {
+              map[key] = { name: key, value: Number(row.total) || 0, color: row.category_color };
+            }
+          });
+        } catch (cardErr) {
+          console.warn('Aviso: Não foi possível expandir sub-categorias do cartão:', cardErr.message);
+        }
+      }
+
+      return Object.values(map)
+        .filter(d => d.value > 0)
+        .sort((a, b) => b.value - a.value);
+    } catch (err) {
+      console.error('Erro em DASHBOARD_CATEGORY_EXPENSES:', err);
+      return [];
+    }
+  });
+
 };
 
 module.exports = { setupTransactionsHandlers };
