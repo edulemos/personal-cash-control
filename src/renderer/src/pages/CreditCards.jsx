@@ -3,7 +3,8 @@ import { Plus, Trash2, CreditCard as CardIcon } from 'lucide-react';
 import clsx from 'clsx';
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  const num = Number(value);
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(num) ? 0 : num);
 };
 
 export default function CreditCards({ userId, globalMonth }) {
@@ -26,22 +27,31 @@ export default function CreditCards({ userId, globalMonth }) {
 
   const fetchData = async () => {
     try {
+      if (!userId) return;
       const cardsList = await window.api.getCreditCards(userId);
-      setCards(cardsList);
-      if (cardsList.length > 0 && !selectedCardId) {
-        setSelectedCardId(cardsList[0].id);
+      if (Array.isArray(cardsList)) {
+        setCards(cardsList);
+        if (cardsList.length > 0 && !selectedCardId) {
+          setSelectedCardId(cardsList[0].id);
+        }
       }
       const cats = await window.api.getCategories(userId);
-      setCategories(cats);
-    } catch (err) { console.error(err); }
+      if (Array.isArray(cats)) {
+        setCategories(cats);
+      }
+    } catch (err) { console.error('Erro ao buscar cartões:', err); }
   };
 
   const fetchTransactions = async () => {
-    if (!selectedCardId) return;
+    if (!selectedCardId || !globalMonth) return;
     try {
       const txs = await window.api.getCreditCardTransactions(selectedCardId, globalMonth);
-      setTransactions(txs);
-    } catch (err) { console.error(err); }
+      if (Array.isArray(txs)) {
+        setTransactions(txs);
+      } else {
+        setTransactions([]);
+      }
+    } catch (err) { console.error('Erro ao buscar transações do cartão:', err); }
   };
 
   useEffect(() => { fetchData(); }, [userId]);
@@ -109,13 +119,13 @@ export default function CreditCards({ userId, globalMonth }) {
     }
   };
 
-  const totalInvoice = transactions.reduce((acc, t) => acc + t.amount, 0);
+  const totalInvoice = (transactions || []).reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
-  const filteredTransactions = transactions.filter(t => {
+  const filteredTransactions = (transactions || []).filter(t => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    const descMatch = t.description.toLowerCase().includes(search);
-    const categoryName = categories.find(c => c.id === t.category_id)?.name || 'Geral';
+    const descMatch = (t.description || '').toLowerCase().includes(search);
+    const categoryName = (categories || []).find(c => c.id === t.category_id)?.name || 'Geral';
     const catMatch = categoryName.toLowerCase().includes(search);
     return descMatch || catMatch;
   });

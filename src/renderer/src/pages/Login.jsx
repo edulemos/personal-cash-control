@@ -19,8 +19,14 @@ export default function Login({ onLoginSuccess }) {
     if (stored) {
       try {
         const user = JSON.parse(stored);
-        onLoginSuccess(user);
-      } catch (_) {}
+        if (user && user.id && user.name) {
+          onLoginSuccess(user);
+        } else {
+          localStorage.removeItem('cashControlUser');
+        }
+      } catch (_) {
+        localStorage.removeItem('cashControlUser');
+      }
     }
   }, []);
 

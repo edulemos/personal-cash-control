@@ -3,6 +3,7 @@ const http = require('http');
 const url = require('url');
 const { shell } = require('electron');
 const fs = require('fs');
+const { pipeline } = require('stream/promises');
 const Store = require('electron-store').default;
 
 const store = new Store();
@@ -138,9 +139,9 @@ class GDriveService {
   }
   
   async downloadDatabase(destPath) {
-     if (!this.isAuthenticated()) throw new Error('Não autenticado no Google Drive');
-     
-     const res = await this.drive.files.list({
+    if (!this.isAuthenticated()) throw new Error('Não autenticado no Google Drive');
+    
+    const res = await this.drive.files.list({
       q: "name='cash_control_backup.sqlite' and trashed=false",
       fields: 'files(id, name)',
       spaces: 'drive'
@@ -151,16 +152,11 @@ class GDriveService {
     }
     
     const fileId = res.data.files[0].id;
-    
     const dest = fs.createWriteStream(destPath);
     const response = await this.drive.files.get({ fileId, alt: 'media' }, { responseType: 'stream' });
     
-    return new Promise((resolve, reject) => {
-      response.data
-        .on('end', () => resolve(true))
-        .on('error', err => reject(err))
-        .pipe(dest);
-    });
+    await pipeline(response.data, dest);
+    return true;
   }
   
   getLastBackupDate() {

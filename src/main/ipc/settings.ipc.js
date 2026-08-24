@@ -2,19 +2,29 @@ const { ipcMain, app } = require('electron');
 const path = require('path');
 const gdriveService = require('../services/gdrive.service');
 const { IPC_CHANNELS } = require('../../shared/ipc-channels');
+const { getDbPath, restoreDatabase } = require('../database/sqlite');
 
 function setupSettingsHandlers() {
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS, async () => {
-    const isAuth = gdriveService.isAuthenticated();
-    let email = null;
-    if (isAuth) {
-      email = await gdriveService.getUserInfo();
+    try {
+      const isAuth = gdriveService.isAuthenticated();
+      let email = null;
+      if (isAuth) {
+        email = await gdriveService.getUserInfo();
+      }
+      return {
+        isAuthenticated: isAuth,
+        email,
+        lastBackup: gdriveService.getLastBackupDate()
+      };
+    } catch (err) {
+      console.error('Erro ao obter status do GDrive:', err);
+      return {
+        isAuthenticated: false,
+        email: null,
+        lastBackup: null
+      };
     }
-    return {
-      isAuthenticated: isAuth,
-      email,
-      lastBackup: gdriveService.getLastBackupDate()
-    };
   });
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN, async () => {
@@ -28,13 +38,18 @@ function setupSettingsHandlers() {
   });
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_LOGOUT, async () => {
-    await gdriveService.logout();
-    return { success: true };
+    try {
+      await gdriveService.logout();
+      return { success: true };
+    } catch (err) {
+      console.error('Erro no logout GDrive:', err);
+      return { success: false, error: err.message };
+    }
   });
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_BACKUP, async () => {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'cash_control.sqlite');
+      const dbPath = getDbPath();
       const backupDate = await gdriveService.uploadDatabase(dbPath);
       return { success: true, lastBackup: backupDate };
     } catch (err) {
@@ -45,27 +60,16 @@ function setupSettingsHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_RESTORE, async () => {
     try {
-      const dbPath = path.join(app.getPath('userData'), 'cash_control.sqlite');
-      // Fecha o app ou simplesmente avisa que vai reiniciar. 
-      // Por segurança, a base de dados vai ser substituída em tempo real (o better-sqlite3 bloqueia? 
-      // Não, mas é perigoso, porém como a conexão é síncrona, e estamos apenas baixando por cima do arquivo...)
-      // O ideal seria baixar pra um arquivo temp, fechar conexão DB, mover arquivo, reiniciar.
-      // Como não exportamos a função de fechar a DB no sqlite.js, vamos apenas sobrescrever, a próxima operação vai ler do novo disco.
+      const dbPath = getDbPath();
+      const tempPath = `${dbPath}.temp_${Date.now()}`;
       
-      const tempPath = dbPath + '.temp';
+      // 1. Baixa o backup completo para arquivo temporário
       await gdriveService.downloadDatabase(tempPath);
       
-      const fs = require('fs');
-      fs.copyFileSync(tempPath, dbPath);
-      fs.unlinkSync(tempPath);
+      // 2. Fecha conexões, remove WAL/SHM, copia arquivo e roda migrations
+      restoreDatabase(tempPath);
       
-      // Reiniciar aplicativo para forçar reconexão do DB
-      setTimeout(() => {
-        app.relaunch();
-        app.exit(0);
-      }, 1000);
-      
-      return { success: true };
+      return { success: true, requireRelogin: true };
     } catch (err) {
       console.error('Erro no restore:', err);
       return { success: false, error: err.message };

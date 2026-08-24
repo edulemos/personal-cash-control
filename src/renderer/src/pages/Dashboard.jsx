@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock } from 'lucide-react';
 
 const formatCurrency = (value) => {
+  const num = Number(value);
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value);
+  }).format(isNaN(num) ? 0 : num);
 };
 
 export default function Dashboard({ userId, startDate, endDate }) {
@@ -14,10 +15,19 @@ export default function Dashboard({ userId, startDate, endDate }) {
 
   const fetchStats = async () => {
     try {
-      const result = await window.api.getDashboardStats(userId, startDate, endDate);
-      setStats(result);
+      if (userId && startDate && endDate) {
+        const result = await window.api.getDashboardStats(userId, startDate, endDate);
+        if (result && typeof result === 'object' && !result.error) {
+          setStats({
+            income: Number(result.income) || 0,
+            expensePaid: Number(result.expensePaid) || 0,
+            expensePending: Number(result.expensePending) || 0,
+            balance: Number(result.balance) || 0
+          });
+        }
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Erro ao buscar stats do dashboard:', error);
     } finally {
       setLoading(false);
     }
@@ -45,7 +55,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
             <h3 className="text-text-muted font-medium">Saldo Total</h3>
             <Wallet className="text-accent" size={24} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.balance)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(stats?.balance)}</p>
         </div>
 
         {/* Card Receitas */}
@@ -54,7 +64,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
             <h3 className="text-text-muted font-medium">Receitas</h3>
             <ArrowUpCircle className="text-emerald-400" size={24} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.income)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(stats?.income)}</p>
         </div>
 
         {/* Card Despesas Pagas */}
@@ -63,7 +73,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
             <h3 className="text-text-muted font-medium">Despesas (Pagas)</h3>
             <ArrowDownCircle className="text-rose-400" size={24} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.expensePaid)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(stats?.expensePaid)}</p>
         </div>
 
         {/* Card Despesas Pendentes */}
@@ -72,7 +82,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
             <h3 className="text-text-muted font-medium">Despesas (Pendentes)</h3>
             <Clock className="text-amber-400" size={24} />
           </div>
-          <p className="text-3xl font-bold">{formatCurrency(stats.expensePending)}</p>
+          <p className="text-3xl font-bold">{formatCurrency(stats?.expensePending)}</p>
         </div>
       </div>
 

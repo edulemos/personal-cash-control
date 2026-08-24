@@ -3,10 +3,11 @@ import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import clsx from 'clsx';
 
 const formatCurrency = (value) => {
+  const num = Number(value);
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL'
-  }).format(value);
+  }).format(isNaN(num) ? 0 : num);
 };
 
 export default function Transactions({ userId, startDate, endDate }) {
@@ -30,12 +31,18 @@ export default function Transactions({ userId, startDate, endDate }) {
 
   const fetchData = async () => {
     try {
-      const txs = await window.api.getTransactions(userId, startDate, endDate);
-      setTransactions(txs);
-      const cats = await window.api.getCategories(userId);
-      setCategories(cats);
+      if (userId && startDate && endDate) {
+        const txs = await window.api.getTransactions(userId, startDate, endDate);
+        if (Array.isArray(txs)) {
+          setTransactions(txs);
+        }
+        const cats = await window.api.getCategories(userId);
+        if (Array.isArray(cats)) {
+          setCategories(cats);
+        }
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Erro ao buscar transações:', error);
     }
   };
 
@@ -118,10 +125,10 @@ export default function Transactions({ userId, startDate, endDate }) {
     }
   };
 
-  const filteredTransactions = transactions.filter(t => {
+  const filteredTransactions = (transactions || []).filter(t => {
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
-    const descMatch = t.description.toLowerCase().includes(search);
+    const descMatch = (t.description || '').toLowerCase().includes(search);
     const catMatch = (t.category_name || 'Geral').toLowerCase().includes(search);
     return descMatch || catMatch;
   });
@@ -178,7 +185,7 @@ export default function Transactions({ userId, startDate, endDate }) {
               ) : (
                 filteredTransactions.map((t) => (
                   <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
-                    <td className="p-4">{t.date.split('-').reverse().join('/')}</td>
+                    <td className="p-4">{(t.date && typeof t.date === 'string') ? t.date.split('-').reverse().join('/') : '-'}</td>
                     <td className="p-4 font-medium flex items-center gap-2">
                       {t.description}
                       {t.is_fixed ? (

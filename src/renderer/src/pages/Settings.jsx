@@ -114,14 +114,21 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
     try {
       const result = await window.api.gdriveRestore();
       if (result.success) {
-        // App will relaunch, but just in case:
-        setSuccess('Restauração concluída! O aplicativo será reiniciado.');
+        setSuccess('Base de dados restaurada com sucesso! Redirecionando para o login...');
+        setTimeout(() => {
+          localStorage.removeItem('cashControlUser');
+          if (setUser) {
+            setUser(null);
+          } else {
+            window.location.reload();
+          }
+        }, 1500);
       } else {
-        setError(result.error);
+        setError(result.error || 'Erro ao restaurar backup.');
         setActionLoading(false);
       }
     } catch (err) {
-      setError('Erro ao restaurar backup.');
+      setError('Erro ao restaurar backup: ' + (err.message || 'Falha na comunicação.'));
       setActionLoading(false);
     }
   };
