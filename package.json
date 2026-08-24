@@ -8,7 +8,8 @@
     "start": "electron .",
     "dev": "node scripts/dev.mjs",
     "test": "vitest run --root . tests/",
-    "build": "vite build && electron-builder --win -c electron-builder.yml"
+    "build": "vite build && electron-builder --win -c electron-builder.yml",
+    "build:mac": "vite build && electron-builder --mac -c electron-builder.yml"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

@@ -14,6 +14,7 @@ export default function Transactions({ userId, startDate, endDate }) {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [quickFilter, setQuickFilter] = useState('all');
   
   // Form state
   const [showModal, setShowModal] = useState(false);
@@ -126,11 +127,19 @@ export default function Transactions({ userId, startDate, endDate }) {
   };
 
   const filteredTransactions = (transactions || []).filter(t => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    const descMatch = (t.description || '').toLowerCase().includes(search);
-    const catMatch = (t.category_name || 'Geral').toLowerCase().includes(search);
-    return descMatch || catMatch;
+    // Filtro de texto
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      const descMatch = (t.description || '').toLowerCase().includes(search);
+      const catMatch = (t.category_name || 'Geral').toLowerCase().includes(search);
+      if (!descMatch && !catMatch) return false;
+    }
+
+    // Filtro rápido por tipo
+    if (quickFilter === 'fixed') return !!t.is_fixed;
+    if (quickFilter === 'unpaid') return t.type === 'expense' && !t.is_paid;
+
+    return true;
   });
 
   return (
@@ -140,7 +149,7 @@ export default function Transactions({ userId, startDate, endDate }) {
           <h2 className="text-2xl font-bold">Transações</h2>
           <p className="text-text-muted">Gerencie suas receitas e despesas</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input 
@@ -148,9 +157,20 @@ export default function Transactions({ userId, startDate, endDate }) {
               placeholder="Pesquisar..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white outline-none focus:border-accent w-64 transition-colors"
+              className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white outline-none focus:border-accent w-52 transition-colors"
             />
           </div>
+
+          <select
+            value={quickFilter}
+            onChange={(e) => setQuickFilter(e.target.value)}
+            className="bg-black/20 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-accent transition-colors cursor-pointer"
+          >
+            <option value="all">Todas</option>
+            <option value="fixed">Despesas Fixas</option>
+            <option value="unpaid">Não Pagas</option>
+          </select>
+
           <button 
               onClick={() => {
                 setEditingId(null);
