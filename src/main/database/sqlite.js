@@ -141,6 +141,24 @@ const initDb = () => {
           );
         `);
       }
+    },
+    {
+      id: 5,
+      name: '005_add_google_auth_to_users',
+      up: () => {
+        // Adiciona colunas para autenticação Google OAuth 2.0
+        if (!hasColumn(db, 'users', 'google_id')) {
+          db.exec(`ALTER TABLE users ADD COLUMN google_id TEXT;`);
+        }
+        if (!hasColumn(db, 'users', 'email')) {
+          db.exec(`ALTER TABLE users ADD COLUMN email TEXT;`);
+        }
+        if (!hasColumn(db, 'users', 'picture')) {
+          db.exec(`ALTER TABLE users ADD COLUMN picture TEXT;`);
+        }
+        // Cria índice único em google_id para buscas rápidas
+        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;`);
+      }
     }
   ];
 

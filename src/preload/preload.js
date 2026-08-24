@@ -1,9 +1,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const IPC_CHANNELS = {
-  AUTH_LOGIN: 'auth:login',
-  AUTH_REGISTER: 'auth:register',
-  AUTH_UPDATE_PROFILE: 'auth:update_profile',
+  AUTH_GOOGLE_LOGIN: 'auth:google:login',
+  AUTH_GOOGLE_SESSION: 'auth:google:session',
   
   CATEGORIES_GET: 'categories:get',
   CATEGORIES_ADD: 'categories:add',
@@ -35,9 +34,9 @@ const IPC_CHANNELS = {
 };
 
 contextBridge.exposeInMainWorld('api', {
-    login: (credentials) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_LOGIN, credentials),
-    register: (userData) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_REGISTER, userData),
-    updateProfile: (userId, data) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_UPDATE_PROFILE, { userId, data }),
+    // Autenticação via Google OAuth 2.0
+    loginWithGoogle: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GOOGLE_LOGIN),
+    googleSession: () => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GOOGLE_SESSION),
 
     getCategories: (userId) => ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_GET, userId),
     addCategory: (category) => ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_ADD, category),

@@ -1,187 +1,139 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, User } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 
 export default function Login({ onLoginSuccess }) {
-  const [isRegistering, setIsRegistering] = useState(false);
-  
-  const [form, setForm] = useState({
-    name: '',
-    username: '',
-    password: ''
-  });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [autoLogging, setAutoLogging] = useState(true);
+  const [error, setError] = useState('');
 
+  // Tenta auto-login com tokens já armazenados
   useEffect(() => {
-    const stored = localStorage.getItem('cashControlUser');
-    if (stored) {
+    const tryAutoLogin = async () => {
       try {
-        const user = JSON.parse(stored);
-        if (user && user.id && user.name) {
-          onLoginSuccess(user);
-        } else {
-          localStorage.removeItem('cashControlUser');
+        const res = await window.api.googleSession();
+        if (res.success && res.user?.id) {
+          onLoginSuccess(res.user);
+          return;
         }
       } catch (_) {
-        localStorage.removeItem('cashControlUser');
+        // sem sessão ou token expirado — mostra tela de login normalmente
+      } finally {
+        setAutoLogging(false);
       }
-    }
+    };
+    tryAutoLogin();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
     setError('');
     setLoading(true);
-
     try {
-      if (isRegistering) {
-        const res = await window.api.register(form);
-        if (res.success) {
-          if (rememberMe) {
-            localStorage.setItem('cashControlUser', JSON.stringify(res.user));
-          }
-          onLoginSuccess(res.user);
-        } else {
-          setError(res.message);
-        }
+      const res = await window.api.loginWithGoogle();
+      if (res.success && res.user?.id) {
+        onLoginSuccess(res.user);
       } else {
-        const res = await window.api.login({ username: form.username, password: form.password });
-        if (res.success) {
-          if (rememberMe) {
-            localStorage.setItem('cashControlUser', JSON.stringify(res.user));
-          }
-          onLoginSuccess(res.user);
-        } else {
-          setError(res.message);
-        }
+        setError(res.message || 'Não foi possível autenticar com o Google.');
       }
     } catch (err) {
-      setError('Ocorreu um erro inesperado.');
+      setError('Ocorreu um erro inesperado. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Tela de carregamento enquanto tenta auto-login
+  if (autoLogging) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <p className="text-text-muted text-sm">Verificando sessão...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Blobs de fundo animados */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
+
       {/* Logo Superior Esquerda */}
       <div className="absolute top-8 left-8 flex items-center gap-3 z-20">
-        <img 
-          src={logoImg} 
-          alt="Cash Control Logo" 
-          className="w-12 h-12 rounded-xl shadow-lg"
-        />
-        <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-400">
+        <img src={logoImg} alt="Cash Control Logo" className="w-10 h-10 rounded-xl shadow-lg" />
+        <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-400">
           Cash Control
         </span>
       </div>
 
-      <div className="glass-panel w-full max-w-md p-8 relative overflow-hidden z-10">
-        {/* Decoração de fundo */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent/20 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      {/* Card principal */}
+      <div className="glass-panel w-full max-w-sm p-10 relative overflow-hidden z-10 flex flex-col items-center gap-8">
+        {/* Brilho interno */}
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
 
-        <div className="text-center mb-8 relative z-10">
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-400">
-            Cash Control
-          </h1>
-          <p className="text-text-muted mt-2">
-            {isRegistering ? 'Crie sua conta para começar' : 'Faça login para continuar'}
+        {/* Ícone / Logo */}
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-20 h-20 rounded-2xl overflow-hidden shadow-2xl ring-2 ring-white/10">
+            <img src={logoImg} alt="Cash Control" className="w-full h-full object-cover" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-white">Cash Control</h1>
+            <p className="text-text-muted text-sm mt-1">Controle financeiro pessoal</p>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="w-full border-t border-white/8" />
+
+        {/* Texto de boas-vindas */}
+        <div className="text-center">
+          <p className="text-white font-medium">Bem-vindo de volta</p>
+          <p className="text-text-muted text-sm mt-1">
+            Acesse com sua conta Google para continuar
           </p>
         </div>
 
+        {/* Erro */}
         {error && (
-          <div className="mb-6 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center relative z-10">
+          <div className="w-full p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
-          {isRegistering && (
-            <div>
-              <label className="block text-sm font-medium text-text-muted mb-1">Nome Completo</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
-                  <User size={18} />
-                </div>
-                <input 
-                  type="text" 
-                  required 
-                  className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white outline-none focus:border-accent transition-colors"
-                  value={form.name}
-                  onChange={e => setForm({...form, name: e.target.value})}
-                  placeholder="Seu nome"
-                />
-              </div>
-            </div>
+        {/* Botão Google */}
+        <button
+          id="btn-google-login"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-800 font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0"
+        >
+          {loading ? (
+            <>
+              <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+              <span>Aguardando autorização...</span>
+            </>
+          ) : (
+            <>
+              {/* SVG logo do Google */}
+              <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              <span>Continuar com Google</span>
+            </>
           )}
+        </button>
 
-          <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">Usuário</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
-                <User size={18} />
-              </div>
-              <input 
-                type="text" 
-                required 
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white outline-none focus:border-accent transition-colors"
-                value={form.username}
-                onChange={e => setForm({...form, username: e.target.value})}
-                placeholder="Ex: admin"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-text-muted mb-1">Senha</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-muted">
-                <Lock size={18} />
-              </div>
-              <input 
-                type="password" 
-                required 
-                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white outline-none focus:border-accent transition-colors"
-                value={form.password}
-                onChange={e => setForm({...form, password: e.target.value})}
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center mb-4">
-            <input 
-              type="checkbox" 
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={e => setRememberMe(e.target.checked)}
-              className="w-4 h-4 text-accent bg-black/20 border border-white/10 rounded"
-            />
-            <label htmlFor="rememberMe" className="ml-2 text-sm text-text-muted">Lembrar-me</label>
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-accent hover:bg-accent-hover text-white font-medium py-3 rounded-xl transition-colors mt-6 disabled:opacity-50"
-          >
-            {loading ? 'Aguarde...' : (isRegistering ? 'Criar Conta' : 'Entrar')}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center text-sm text-text-muted relative z-10">
-          {isRegistering ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
-          <button 
-            type="button" 
-            onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
-            className="ml-2 text-accent hover:text-accent-hover font-medium transition-colors"
-          >
-            {isRegistering ? 'Fazer login' : 'Cadastre-se'}
-          </button>
-        </div>
+        {/* Nota de privacidade */}
+        <p className="text-text-muted text-xs text-center leading-relaxed">
+          Seus dados ficam armazenados <strong className="text-white/60">localmente</strong> neste dispositivo.
+          O Google é usado apenas para autenticação e backup.
+        </p>
       </div>
     </div>
   );
 }
+

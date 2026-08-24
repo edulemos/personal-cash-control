@@ -7,7 +7,12 @@ const { pipeline } = require('stream/promises');
 const Store = require('electron-store').default;
 
 const store = new Store();
-const SCOPES = ['https://www.googleapis.com/auth/drive.file'];
+const SCOPES = [
+  'https://www.googleapis.com/auth/drive.file',
+  'openid',
+  'profile',
+  'email'
+];
 
 class GDriveService {
   constructor() {
@@ -47,6 +52,36 @@ class GDriveService {
     }
   }
 
+  /**
+   * Retorna o perfil completo do usuário Google (sub, name, email, picture).
+   * Usa a API OAuth2 userinfo para obter dados do perfil.
+   */
+  async getGoogleUserProfile() {
+    if (!this.oAuth2Client) return null;
+    try {
+      const oauth2 = google.oauth2({ version: 'v2', auth: this.oAuth2Client });
+      const { data } = await oauth2.userinfo.get();
+      return {
+        google_id: data.id,
+        name: data.name,
+        email: data.email,
+        picture: data.picture
+      };
+    } catch (err) {
+      console.error('Erro ao obter perfil Google:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Retorna o perfil do usuário Google a partir dos tokens armazenados
+   * (chamado durante a inicialização para restaurar a sessão).
+   */
+  async getStoredUserProfile() {
+    if (!this.isAuthenticated()) return null;
+    return this.getGoogleUserProfile();
+  }
+
   async login() {
     if (!this.oAuth2Client) throw new Error('Client ID ou Secret não configurados no arquivo .env');
 
@@ -66,10 +101,10 @@ class GDriveService {
             res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
             res.end(`
               <html>
-                <body style="font-family: sans-serif; text-align: center; margin-top: 100px;">
-                  <h1>Autenticação concluída!</h1>
-                  <p>Você pode fechar esta janela e voltar ao Cash Control.</p>
-                  <script>window.close()</script>
+                <body style="font-family: sans-serif; background: #0f172a; color: white; text-align: center; margin-top: 100px; font-family: 'Inter', sans-serif;">
+                  <h1 style="color: #10b981;">✓ Autenticação concluída!</h1>
+                  <p style="color: #94a3b8;">Você pode fechar esta janela e voltar ao Cash Control.</p>
+                  <script>setTimeout(() => window.close(), 1500)</script>
                 </body>
               </html>
             `);
@@ -82,8 +117,9 @@ class GDriveService {
             store.set('gdrive_tokens', tokens);
             this.drive = google.drive({ version: 'v3', auth: this.oAuth2Client });
             
-            const email = await this.getUserInfo();
-            resolve(email);
+            // Busca perfil completo do usuário Google
+            const googleUser = await this.getGoogleUserProfile();
+            resolve(googleUser);
           }
         } catch (e) {
           reject(e);

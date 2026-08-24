@@ -1,67 +1,64 @@
-const crypto = require('crypto');
 const { getDb } = require('../database/sqlite');
 
 /**
- * Cria o hash de uma senha.
- * @param {string} password A senha em texto plano.
- * @returns {Promise<{hash: string, salt: string}>} O hash e o salt.
+ * Autentica ou cria um usuário via Google OAuth 2.0.
+ *
+ * Estratégia de migração transparente:
+ * 1. Busca usuário pelo google_id → já migrado, retorna direto.
+ * 2. Não encontrou → verifica se existe exatamente 1 usuário no banco sem google_id.
+ *    Se sim, associa o google_id a ele (migração de conta existente, sem perda de dados).
+ * 3. Nenhum usuário no banco → cria um novo com os dados do Google.
+ *
+ * @param {{ google_id: string, name: string, email: string, picture: string }} googleProfile
+ * @returns {{ id: number, name: string, email: string, picture: string }}
  */
-function hashPassword(password) {
-  return new Promise((resolve, reject) => {
-    const salt = crypto.randomBytes(16).toString('hex');
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err);
-      resolve({
-        hash: derivedKey.toString('hex'),
-        salt: salt
-      });
-    });
-  });
-}
+async function loginWithGoogle({ google_id, name, email, picture }) {
+  if (!google_id) throw new Error('Perfil Google inválido: google_id ausente.');
 
-/**
- * Verifica se a senha corresponde ao hash e salt armazenados.
- * @param {string} password A senha fornecida.
- * @param {string} hash O hash armazenado.
- * @param {string} salt O salt armazenado.
- * @returns {Promise<boolean>} Verdadeiro se as senhas coincidirem.
- */
-function verifyPassword(password, hash, salt) {
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, (err, derivedKey) => {
-      if (err) reject(err);
-      resolve(hash === derivedKey.toString('hex'));
-    });
-  });
-}
-
-/**
- * Registra um novo usuário no banco de dados.
- * @param {string} name Nome de exibição.
- * @param {string} username Nome de usuário único.
- * @param {string} password Senha em texto plano.
- * @returns {Promise<Object>} Objeto com informações do usuário criado ou lança erro.
- */
-async function registerUser(name, username, password) {
   const db = getDb();
-  
-  // Verifica se o username já existe
-  const stmtCheck = db.prepare('SELECT id FROM users WHERE username = ?');
-  const existingUser = stmtCheck.get(username);
-  if (existingUser) {
-    throw new Error('Nome de usuário já está em uso.');
+
+  // 1. Usuário já associado a este google_id
+  const existing = db.prepare(
+    'SELECT id, name, email, picture FROM users WHERE google_id = ?'
+  ).get(google_id);
+
+  if (existing) {
+    // Atualiza nome/foto caso tenham mudado no Google
+    db.prepare(
+      'UPDATE users SET name = ?, email = ?, picture = ? WHERE id = ?'
+    ).run(name, email, picture ?? existing.picture, existing.id);
+
+    return { id: existing.id, name, email, picture: picture ?? existing.picture };
   }
 
-  // Cria o hash da senha
-  const { hash, salt } = await hashPassword(password);
+  // 2. Migração transparente: existe 1 usuário legacy sem google_id?
+  const legacyUsers = db.prepare(
+    'SELECT id, name FROM users WHERE google_id IS NULL'
+  ).all();
 
-  // Insere no banco
-  const stmtInsert = db.prepare('INSERT INTO users (name, username, password_hash, salt) VALUES (?, ?, ?, ?)');
-  const info = stmtInsert.run(name, username, hash, salt);
+  if (legacyUsers.length === 1) {
+    const legacy = legacyUsers[0];
+    db.prepare(
+      'UPDATE users SET google_id = ?, email = ?, picture = ?, name = ? WHERE id = ?'
+    ).run(google_id, email, picture, name, legacy.id);
+
+    console.log(`[auth] Usuário legado ID=${legacy.id} associado ao Google ID=${google_id}`);
+    return { id: legacy.id, name, email, picture };
+  }
+
+  // 3. Nenhum usuário no banco → cria novo
+  // username derivado do email para satisfazer constraint UNIQUE (campo legado)
+  const username = email.split('@')[0] + '_' + Date.now();
+  const info = db.prepare(
+    `INSERT INTO users (name, username, password_hash, salt, google_id, email, picture)
+     VALUES (?, ?, '', '', ?, ?, ?)`
+  ).run(name, username, google_id, email, picture);
   const newUserId = Number(info.lastInsertRowid);
 
-  // Seeder: Categorias padrão para o novo usuário
-  const insertCatStmt = db.prepare('INSERT INTO categories (user_id, name, type, color, icon) VALUES (?, ?, ?, ?, ?)');
+  // Seeder: categorias padrão para conta nova
+  const insertCatStmt = db.prepare(
+    'INSERT INTO categories (user_id, name, type, color, icon) VALUES (?, ?, ?, ?, ?)'
+  );
   const defaultCategories = [
     [newUserId, 'Alimentação', 'expense', '#ef4444', 'pizza'],
     [newUserId, 'Transporte', 'expense', '#f59e0b', 'car'],
@@ -71,96 +68,13 @@ async function registerUser(name, username, password) {
     [newUserId, 'Salário', 'income', '#10b981', 'dollar-sign'],
     [newUserId, 'Outros', 'expense', '#64748b', 'more-horizontal']
   ];
-  const insertMany = db.transaction((cats) => {
+  db.transaction((cats) => {
     for (const cat of cats) insertCatStmt.run(...cat);
-  });
-  insertMany(defaultCategories);
+  })(defaultCategories);
 
-  return {
-    id: newUserId,
-    name,
-    username
-  };
+  console.log(`[auth] Novo usuário criado via Google: ${name} <${email}>`);
+  return { id: newUserId, name, email, picture };
 }
 
-/**
- * Autentica um usuário.
- * @param {string} username Nome de usuário.
- * @param {string} password Senha em texto plano.
- * @returns {Promise<Object>} Objeto com informações do usuário autenticado ou lança erro.
- */
-async function loginUser(username, password) {
-  const db = getDb();
-  
-  // Busca o usuário pelo username
-  const stmt = db.prepare('SELECT id, name, username, password_hash, salt FROM users WHERE username = ?');
-  const user = stmt.get(username);
-  
-  if (!user) {
-    throw new Error('Credenciais inválidas.');
-  }
+module.exports = { loginWithGoogle };
 
-  // Verifica a senha
-  const isValid = await verifyPassword(password, user.password_hash, user.salt);
-  if (!isValid) {
-    throw new Error('Credenciais inválidas.');
-  }
-
-  return {
-    id: user.id,
-    name: user.name,
-    username: user.username
-  };
-}
-
-/**
- * Atualiza o perfil do usuário.
- * @param {number} userId ID do usuário.
- * @param {Object} data Dados para atualizar (name, username, newPassword, currentPassword).
- * @returns {Promise<Object>} Usuário atualizado.
- */
-async function updateUserProfile(userId, { name, username, newPassword, currentPassword }) {
-  const db = getDb();
-  
-  const stmt = db.prepare('SELECT id, name, username, password_hash, salt FROM users WHERE id = ?');
-  const user = stmt.get(userId);
-  if (!user) throw new Error('Usuário não encontrado.');
-
-  // Check current password
-  const isValid = await verifyPassword(currentPassword, user.password_hash, user.salt);
-  if (!isValid) throw new Error('Senha atual incorreta.');
-
-  // Check if new username is taken by someone else
-  if (username && username !== user.username) {
-    const stmtCheck = db.prepare('SELECT id FROM users WHERE username = ?');
-    if (stmtCheck.get(username)) {
-      throw new Error('Nome de usuário já está em uso.');
-    }
-  }
-
-  let query = 'UPDATE users SET name = ?, username = ?';
-  let params = [name || user.name, username || user.username];
-
-  if (newPassword) {
-    const { hash, salt } = await hashPassword(newPassword);
-    query += ', password_hash = ?, salt = ?';
-    params.push(hash, salt);
-  }
-  
-  query += ' WHERE id = ?';
-  params.push(userId);
-
-  db.prepare(query).run(...params);
-
-  return {
-    id: userId,
-    name: name || user.name,
-    username: username || user.username
-  };
-}
-
-module.exports = {
-  registerUser,
-  loginUser,
-  updateUserProfile
-};

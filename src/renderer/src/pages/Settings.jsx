@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogIn, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, User } from 'lucide-react';
+import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
@@ -8,12 +8,6 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  // Profile State
-  const [profileForm, setProfileForm] = useState({ name: user?.name || '', username: user?.username || '', currentPassword: '', newPassword: '' });
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState(null);
-  const [profileSuccess, setProfileSuccess] = useState(null);
 
   useEffect(() => {
     fetchStatus();
@@ -58,29 +52,13 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
     }
   };
 
-  const handleLogin = async () => {
-    setActionLoading(true);
-    setError(null);
-    try {
-      const result = await window.api.gdriveLogin();
-      if (result.success) {
-        setSuccess('Conectado com sucesso!');
-        fetchStatus();
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError('Erro ao abrir tela de login.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
+  const handleGoogleAccountLogout = async () => {
+    if (!confirm('Deseja sair da sua conta Google? Você precisará fazer login novamente.')) return;
     setActionLoading(true);
     await window.api.gdriveLogout();
-    setSuccess('Desconectado do Google Drive.');
-    fetchStatus();
+    // Limpa sessão do app
+    localStorage.removeItem('cashControlUser');
+    if (setUser) setUser(null);
     setActionLoading(false);
   };
 
@@ -148,68 +126,46 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
         <p className="text-text-muted">Ajustes e backup do sistema</p>
       </header>
 
-      {/* Seção de Perfil */}
+      {/* Seção de Conta Google */}
       <div className="glass-panel p-8 max-w-3xl mb-8">
-        <div className="flex items-start gap-4 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-accent/20 text-accent flex items-center justify-center shrink-0">
-            <User size={24} />
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 overflow-hidden">
+            {user?.picture
+              ? <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
+              : <Cloud size={24} />}
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-semibold">Editar Perfil</h3>
+            <h3 className="text-xl font-semibold">Conta Google</h3>
             <p className="text-text-muted mt-1 text-sm">
-              Altere seu nome, nome de usuário ou senha de acesso.
+              Sua identidade e autorização de backup vinculadas à conta abaixo.
             </p>
           </div>
         </div>
 
-        {profileError && (
-          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl mb-6 flex gap-3 text-sm">
-            <AlertTriangle size={18} className="shrink-0" />
-            <p>{profileError}</p>
-          </div>
-        )}
-
-        {profileSuccess && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl mb-6 text-sm">
-            {profileSuccess}
-          </div>
-        )}
-
-        <form onSubmit={handleProfileSubmit} className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-text-muted mb-1 block">Nome</label>
-              <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} required />
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0">
+              {user?.picture
+                ? <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-accent/30 flex items-center justify-center text-accent font-bold text-lg">{user?.name?.[0]?.toUpperCase()}</div>}
             </div>
             <div>
-              <label className="text-xs text-text-muted mb-1 block">Nome de Usuário</label>
-              <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.username} onChange={e => setProfileForm({...profileForm, username: e.target.value})} required />
+              <p className="font-semibold">{user?.name || 'Usuário'}</p>
+              <p className="text-sm text-text-muted">{user?.email || gdriveStatus.email}</p>
             </div>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-white/10">
-            <div>
-              <label className="text-xs text-text-muted mb-1 block">Nova Senha (opcional)</label>
-              <input type="password" placeholder="Deixe em branco para não alterar" className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={profileForm.newPassword} onChange={e => setProfileForm({...profileForm, newPassword: e.target.value})} />
-            </div>
-            <div>
-              <label className="text-xs text-rose-400 mb-1 block">Senha Atual (obrigatória para salvar)</label>
-              <input type="password" placeholder="Sua senha atual" className="w-full bg-black/30 border border-rose-500/30 rounded-lg p-3 outline-none focus:border-rose-500 text-white" value={profileForm.currentPassword} onChange={e => setProfileForm({...profileForm, currentPassword: e.target.value})} required />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4">
-            <button 
-              type="submit"
-              disabled={profileLoading}
-              className="bg-accent hover:bg-accent-hover text-white px-6 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50"
-            >
-              {profileLoading ? <Loader2 className="animate-spin" size={18} /> : 'Salvar Alterações'}
-            </button>
-          </div>
-        </form>
+          <button
+            onClick={handleGoogleAccountLogout}
+            disabled={actionLoading}
+            className="text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shrink-0"
+          >
+            <LogOut size={16} />
+            Sair da Conta
+          </button>
+        </div>
       </div>
 
+      {/* Seção de Backup Google Drive */}
       <div className="glass-panel p-8 max-w-3xl">
         <div className="flex items-start gap-4 mb-8">
           <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
@@ -218,7 +174,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           <div className="flex-1">
             <h3 className="text-xl font-semibold">Backup no Google Drive</h3>
             <p className="text-text-muted mt-1 text-sm">
-              Mantenha seus dados financeiros seguros salvando uma cópia criptografada na sua conta do Google Drive.
+              Mantenha seus dados financeiros seguros salvando uma cópia na sua conta Google Drive.
             </p>
           </div>
         </div>
@@ -236,71 +192,40 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         )}
 
-        {!gdriveStatus.isAuthenticated ? (
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6 text-center">
-            <p className="mb-4 text-text-muted">Você ainda não conectou uma conta do Google Drive.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h4 className="font-semibold mb-2">Fazer Backup</h4>
+            <p className="text-xs text-text-muted mb-4 min-h-[40px]">
+              Envia a base de dados atual para o Drive. <br/>
+              {gdriveStatus.lastBackup 
+                ? `Último backup: ${new Date(gdriveStatus.lastBackup).toLocaleString('pt-BR')}`
+                : 'Nenhum backup realizado ainda.'}
+            </p>
             <button 
-              onClick={handleLogin}
+              onClick={handleBackup}
               disabled={actionLoading}
-              className="bg-white text-black hover:bg-gray-200 px-6 py-2.5 rounded-lg font-medium inline-flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="w-full bg-accent hover:bg-accent-hover text-white px-4 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50"
             >
-              {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <LogIn size={18} />}
-              Conectar ao Google Drive
+              {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+              Backup Agora
             </button>
           </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <p className="text-sm text-text-muted">Conectado como:</p>
-                <p className="font-semibold">{gdriveStatus.email || 'Conta vinculada'}</p>
-              </div>
-              <button 
-                onClick={handleLogout}
-                disabled={actionLoading}
-                className="text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2"
-              >
-                <LogOut size={16} />
-                Desconectar
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-                <h4 className="font-semibold mb-2">Fazer Backup</h4>
-                <p className="text-xs text-text-muted mb-4 min-h-[40px]">
-                  Envia a base de dados atual para o Drive. <br/>
-                  {gdriveStatus.lastBackup 
-                    ? `Último backup: ${new Date(gdriveStatus.lastBackup).toLocaleString('pt-BR')}`
-                    : 'Nenhum backup realizado ainda.'}
-                </p>
-                <button 
-                  onClick={handleBackup}
-                  disabled={actionLoading}
-                  className="w-full bg-accent hover:bg-accent-hover text-white px-4 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                  Backup Agora
-                </button>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-                <h4 className="font-semibold mb-2 text-rose-400">Restaurar Dados</h4>
-                <p className="text-xs text-text-muted mb-4 min-h-[40px]">
-                  Baixa o último backup do Drive e substitui os dados atuais deste computador.
-                </p>
-                <button 
-                  onClick={handleRestore}
-                  disabled={actionLoading}
-                  className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-4 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50 border border-rose-500/20"
-                >
-                  {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                  Restaurar Backup
-                </button>
-              </div>
-            </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h4 className="font-semibold mb-2 text-rose-400">Restaurar Dados</h4>
+            <p className="text-xs text-text-muted mb-4 min-h-[40px]">
+              Baixa o último backup do Drive e substitui os dados atuais deste computador.
+            </p>
+            <button 
+              onClick={handleRestore}
+              disabled={actionLoading}
+              className="w-full bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 px-4 py-2.5 rounded-lg font-medium transition-colors inline-flex justify-center items-center gap-2 disabled:opacity-50 border border-rose-500/20"
+            >
+              {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+              Restaurar Backup
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Seção de Atualizações */}

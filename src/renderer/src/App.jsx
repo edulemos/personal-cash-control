@@ -131,8 +131,10 @@ function App() {
         </nav>
         
         <div className="p-4 border-t border-white/5">
-            <button 
-              onClick={() => {
+          <button 
+              onClick={async () => {
+                // Limpa tokens OAuth do Google para evitar auto-login após sair
+                try { await window.api.gdriveLogout(); } catch (_) {}
                 localStorage.removeItem('cashControlUser');
                 setUser(null);
                 setCurrentView('dashboard');
