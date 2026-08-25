@@ -19,6 +19,7 @@ export default function CreditCards({ userId, globalMonth }) {
   const [showCardModal, setShowCardModal] = useState(false);
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTxId, setEditingTxId] = useState(null);
+  const [txError, setTxError] = useState('');
 
   const DEFAULT_CARD_FORM = { name: '', due_day: 10, closing_day: 3 };
   const [cardForm, setCardForm] = useState(DEFAULT_CARD_FORM);
@@ -72,12 +73,17 @@ export default function CreditCards({ userId, globalMonth }) {
 
   const handleTxSubmit = async (e) => {
     e.preventDefault();
+    if (!txForm.category_id) {
+      setTxError('Selecione uma categoria antes de lançar.');
+      return;
+    }
+    setTxError('');
     const payload = {
       ...txForm,
       credit_card_id: selectedCardId,
       amount: Number(txForm.amount),
       installments: Number(txForm.installments),
-      category_id: txForm.category_id ? Number(txForm.category_id) : null
+      category_id: Number(txForm.category_id)
     };
     
     if (editingTxId) {
@@ -105,6 +111,7 @@ export default function CreditCards({ userId, globalMonth }) {
   const closeTxModal = () => {
     setShowTxModal(false);
     setEditingTxId(null);
+    setTxError('');
     setTxForm({
       description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1
     });
@@ -307,12 +314,17 @@ export default function CreditCards({ userId, globalMonth }) {
                 <input type="number" min="1" max="48" placeholder="Parcelas" required disabled={!!editingTxId} className="flex-1 bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white disabled:opacity-50" title="Número de Parcelas" value={txForm.installments} onChange={e => setTxForm({...txForm, installments: e.target.value})} />
               </div>
               <input type="date" required disabled={!!editingTxId} className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white disabled:opacity-50" title="Data da Compra" value={txForm.date} onChange={e => setTxForm({...txForm, date: e.target.value})} />
-              <select required className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={txForm.category_id} onChange={e => setTxForm({...txForm, category_id: e.target.value})}>
-                <option value="" disabled>Categoria</option>
+              <select
+                className={`w-full bg-black/30 border rounded-lg p-3 outline-none focus:border-accent text-white transition-colors ${txError ? 'border-rose-500' : 'border-white/10'}`}
+                value={txForm.category_id}
+                onChange={e => { setTxForm({...txForm, category_id: e.target.value}); setTxError(''); }}
+              >
+                <option value="">Categoria</option>
                 {categories.filter(c => c.type === 'expense').map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+              {txError && <p className="text-xs text-rose-400 -mt-2">{txError}</p>}
               {editingTxId && <p className="text-xs text-amber-500/80">Nota: Não é possível editar a data nem as parcelas de um lançamento já realizado para não alterar faturas passadas.</p>}
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={closeTxModal} className="px-4 py-2 text-text-muted">Cancelar</button>
