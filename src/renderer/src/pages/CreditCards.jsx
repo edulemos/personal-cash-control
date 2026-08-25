@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, CreditCard as CardIcon } from 'lucide-react';
 import clsx from 'clsx';
 
+const getInitials = (name = '') =>
+  name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+
 const formatCurrency = (value) => {
   const num = Number(value);
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(num) ? 0 : num);
@@ -13,6 +16,7 @@ export default function CreditCards({ userId, globalMonth }) {
   
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [people, setPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modals state
@@ -24,7 +28,7 @@ export default function CreditCards({ userId, globalMonth }) {
   const DEFAULT_CARD_FORM = { name: '', due_day: 10, closing_day: 3 };
   const [cardForm, setCardForm] = useState(DEFAULT_CARD_FORM);
   const [txForm, setTxForm] = useState({
-    description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1
+    description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1, person_id: ''
   });
 
   const fetchData = async () => {
@@ -38,9 +42,9 @@ export default function CreditCards({ userId, globalMonth }) {
         }
       }
       const cats = await window.api.getCategories(userId);
-      if (Array.isArray(cats)) {
-        setCategories(cats);
-      }
+      if (Array.isArray(cats)) setCategories(cats);
+      const ppl = await window.api.getPeople(userId);
+      if (Array.isArray(ppl)) setPeople(ppl);
     } catch (err) { console.error('Erro ao buscar cartões:', err); }
   };
 
@@ -83,7 +87,8 @@ export default function CreditCards({ userId, globalMonth }) {
       credit_card_id: selectedCardId,
       amount: Number(txForm.amount),
       installments: Number(txForm.installments),
-      category_id: Number(txForm.category_id)
+      category_id: Number(txForm.category_id),
+      person_id: txForm.person_id ? Number(txForm.person_id) : null
     };
     
     if (editingTxId) {
@@ -102,7 +107,8 @@ export default function CreditCards({ userId, globalMonth }) {
       amount: t.amount,
       date: t.date,
       category_id: t.category_id || '',
-      installments: t.installments
+      installments: t.installments,
+      person_id: t.person_id || ''
     });
     setEditingTxId(t.id);
     setShowTxModal(true);
@@ -113,7 +119,7 @@ export default function CreditCards({ userId, globalMonth }) {
     setEditingTxId(null);
     setTxError('');
     setTxForm({
-      description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1
+      description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1, person_id: ''
     });
   };
 
@@ -212,7 +218,7 @@ export default function CreditCards({ userId, globalMonth }) {
                 <button 
                   onClick={() => {
                     setEditingTxId(null);
-                    setTxForm({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1 });
+                    setTxForm({ description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1, person_id: '' });
                     setShowTxModal(true);
                   }} 
                   className="text-accent hover:text-accent-hover text-sm font-medium flex items-center gap-1"
@@ -229,6 +235,7 @@ export default function CreditCards({ userId, globalMonth }) {
                     <th className="p-4 font-medium">Data Compra</th>
                     <th className="p-4 font-medium">Descrição</th>
                     <th className="p-4 font-medium">Categoria</th>
+                    <th className="p-4 font-medium">Pessoa</th>
                     <th className="p-4 font-medium">Parcela</th>
                     <th className="p-4 font-medium text-right">Valor</th>
                     <th className="p-4 font-medium w-16"></th>
@@ -236,7 +243,7 @@ export default function CreditCards({ userId, globalMonth }) {
                 </thead>
                 <tbody>
                   {filteredTransactions.length === 0 ? (
-                    <tr><td colSpan="6" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td></tr>
+                    <tr><td colSpan="7" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td></tr>
                   ) : (
                     filteredTransactions.map(t => (
                       <tr key={t.id} className="border-b border-white/5 hover:bg-white/[0.02]">
@@ -249,6 +256,21 @@ export default function CreditCards({ userId, globalMonth }) {
                           >
                             {t.category_name || 'Geral'}
                           </span>
+                        </td>
+                        <td className="p-4">
+                          {t.person_name ? (
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                                style={{ backgroundColor: t.person_avatar_color || '#6366f1' }}
+                              >
+                                {getInitials(t.person_name)}
+                              </div>
+                              <span className="text-sm">{t.person_name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-text-muted text-sm">—</span>
+                          )}
                         </td>
                         <td className="p-4">{t.installments > 1 ? `${t.installment_number}/${t.installments}` : 'À vista'}</td>
                         <td className="p-4 text-right text-rose-300 font-medium">{formatCurrency(t.amount)}</td>
@@ -325,7 +347,17 @@ export default function CreditCards({ userId, globalMonth }) {
                 ))}
               </select>
               {txError && <p className="text-xs text-rose-400 -mt-2">{txError}</p>}
-              {editingTxId && <p className="text-xs text-amber-500/80">Nota: Não é possível editar a data nem as parcelas de um lançamento já realizado para não alterar faturas passadas.</p>}
+              <select
+                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white"
+                value={txForm.person_id}
+                onChange={e => setTxForm({...txForm, person_id: e.target.value})}
+              >
+                <option value="">Pessoa (opcional)</option>
+                {people.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {editingTxId && <p className="text-xs text-amber-500/80">⚠️ Apenas a data e o número de parcelas não podem ser alterados. Descrição, valor, categoria e pessoa podem ser editados normalmente.</p>}
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={closeTxModal} className="px-4 py-2 text-text-muted">Cancelar</button>
                 <button type="submit" className="bg-accent text-white px-4 py-2 rounded-lg font-medium">{editingTxId ? 'Salvar' : 'Lançar'}</button>

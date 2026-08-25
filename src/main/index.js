@@ -61,6 +61,7 @@ const { setupTransactionsHandlers } = require('./ipc/transactions.ipc');
 const { setupAuthHandlers } = require('./ipc/auth.ipc');
 const { setupCreditCardsHandlers } = require('./ipc/creditCards.ipc');
 const setupSettingsHandlers = require('./ipc/settings.ipc');
+const { setupPeopleHandlers } = require('./ipc/people.ipc');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
@@ -70,6 +71,7 @@ app.whenReady().then(() => {
   setupTransactionsHandlers();
   setupCreditCardsHandlers();
   setupSettingsHandlers();
+  setupPeopleHandlers();
 
   // Permite imagens do CDN do Google (fotos de perfil OAuth)
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

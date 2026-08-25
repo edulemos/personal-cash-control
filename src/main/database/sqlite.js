@@ -159,11 +159,45 @@ const initDb = () => {
         // Cria índice único em google_id para buscas rápidas
         db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;`);
       }
+    },
+    {
+      id: 6,
+      name: '006_add_people',
+      up: () => {
+        // Tabela de pessoas associáveis a gastos
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS people (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            avatar_color TEXT NOT NULL DEFAULT '#6366f1',
+            FOREIGN KEY(user_id) REFERENCES users(id)
+          );
+        `);
+        // Adiciona person_id nas transações gerais
+        if (!hasColumn(db, 'transactions', 'person_id')) {
+          db.exec(`ALTER TABLE transactions ADD COLUMN person_id INTEGER;`);
+        }
+        // Adiciona person_id nas transações de cartão
+        if (!hasColumn(db, 'credit_card_transactions', 'person_id')) {
+          db.exec(`ALTER TABLE credit_card_transactions ADD COLUMN person_id INTEGER;`);
+        }
+      }
     }
   ];
 
   const stmtCheck = db.prepare('SELECT count(*) as count FROM migrations WHERE id = ?');
   const stmtInsert = db.prepare('INSERT OR IGNORE INTO migrations (id, name) VALUES (?, ?)');
+
+  // Reparo: se migration 006 foi marcada como executada mas colunas person_id não existem,
+  // remove o registro para forçar reexecução correta
+  try {
+    const m6 = stmtCheck.get(6);
+    if (m6 && m6.count > 0 && !hasColumn(db, 'credit_card_transactions', 'person_id')) {
+      db.prepare('DELETE FROM migrations WHERE id = 6').run();
+      console.log('Reparo: migration 006 resetada para reexecução (colunas person_id ausentes).');
+    }
+  } catch (_) {}
 
   for (const migration of migrations) {
     const row = stmtCheck.get(migration.id);

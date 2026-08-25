@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import clsx from 'clsx';
 
+const getInitials = (name = '') =>
+  name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
+
 const formatCurrency = (value) => {
   const num = Number(value);
   return new Intl.NumberFormat('pt-BR', {
@@ -13,6 +16,7 @@ const formatCurrency = (value) => {
 export default function Transactions({ userId, startDate, endDate }) {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [people, setPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [quickFilter, setQuickFilter] = useState('all');
   
@@ -27,20 +31,19 @@ export default function Transactions({ userId, startDate, endDate }) {
     date: new Date().toISOString().split('T')[0], 
     category_id: '',
     is_fixed: false,
-    is_paid: false
+    is_paid: false,
+    person_id: ''
   });
 
   const fetchData = async () => {
     try {
       if (userId && startDate && endDate) {
         const txs = await window.api.getTransactions(userId, startDate, endDate);
-        if (Array.isArray(txs)) {
-          setTransactions(txs);
-        }
+        if (Array.isArray(txs)) setTransactions(txs);
         const cats = await window.api.getCategories(userId);
-        if (Array.isArray(cats)) {
-          setCategories(cats);
-        }
+        if (Array.isArray(cats)) setCategories(cats);
+        const ppl = await window.api.getPeople(userId);
+        if (Array.isArray(ppl)) setPeople(ppl);
       }
     } catch (error) {
       console.error('Erro ao buscar transações:', error);
@@ -60,11 +63,10 @@ export default function Transactions({ userId, startDate, endDate }) {
         amount: Number(form.amount),
         type: form.type,
         date: form.date,
-        // If no category selected, store null (allows FK to be optional)
         category_id: form.category_id ? Number(form.category_id) : null,
-        // Ensure boolean value for fixed flag
         is_fixed: !!form.is_fixed,
-        is_paid: !!form.is_paid
+        is_paid: !!form.is_paid,
+        person_id: form.person_id ? Number(form.person_id) : null
       };
 
       if (editingId) {
@@ -89,7 +91,8 @@ export default function Transactions({ userId, startDate, endDate }) {
       date: t.date,
       category_id: t.category_id,
       is_fixed: !!t.is_fixed,
-      is_paid: !!t.is_paid
+      is_paid: !!t.is_paid,
+      person_id: t.person_id || ''
     });
     setEditingId(t.id);
     setShowModal(true);
@@ -98,7 +101,7 @@ export default function Transactions({ userId, startDate, endDate }) {
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false, is_paid: false });
+    setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false, is_paid: false, person_id: '' });
   };
 
   const confirmDelete = (id) => {
@@ -193,6 +196,7 @@ export default function Transactions({ userId, startDate, endDate }) {
                 <th className="p-4 font-medium">Data</th>
                 <th className="p-4 font-medium">Descrição</th>
                 <th className="p-4 font-medium">Categoria</th>
+                <th className="p-4 font-medium">Pessoa</th>
                 <th className="p-4 font-medium text-right">Valor</th>
                 <th className="p-4 font-medium text-center">Ações</th>
               </tr>
@@ -200,7 +204,7 @@ export default function Transactions({ userId, startDate, endDate }) {
             <tbody>
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td>
+                  <td colSpan="6" className="p-8 text-center text-text-muted">Nenhuma transação encontrada.</td>
                 </tr>
               ) : (
                 filteredTransactions.map((t) => (
@@ -218,6 +222,21 @@ export default function Transactions({ userId, startDate, endDate }) {
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-white/10" style={{ color: t.category_color }}>
                         {t.category_name || 'Geral'}
                       </span>
+                    </td>
+                    <td className={clsx("p-4", t.type === 'income' ? 'text-emerald-400' : 'text-text-muted')}>
+                      {t.person_name ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                            style={{ backgroundColor: t.person_avatar_color || '#6366f1' }}
+                          >
+                            {getInitials(t.person_name)}
+                          </div>
+                          <span className="text-sm">{t.person_name}</span>
+                        </div>
+                      ) : (
+                        <span className="text-text-muted text-sm">—</span>
+                      )}
                     </td>
                     <td className={clsx("p-4 text-right font-medium", t.type === 'income' ? 'text-emerald-400' : 'text-rose-400')}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
@@ -289,6 +308,18 @@ export default function Transactions({ userId, startDate, endDate }) {
                 <option value="" disabled>Selecione uma Categoria</option>
                 {categories.filter(c => c.type === form.type).map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              {/* Select de Pessoa (opcional) */}
+              <select
+                className="w-full bg-bg-main border border-white/10 rounded-lg p-3 text-white outline-none focus:border-accent"
+                value={form.person_id}
+                onChange={e => setForm({...form, person_id: e.target.value})}
+              >
+                <option value="">Pessoa (opcional)</option>
+                {people.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
 

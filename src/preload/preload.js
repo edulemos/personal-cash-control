@@ -21,17 +21,24 @@ const IPC_CHANNELS = {
   
   CREDIT_CARD_TRANSACTIONS_GET: 'credit_card_transactions:get',
   CREDIT_CARD_TRANSACTIONS_ADD: 'credit_card_transactions:add',
+  CREDIT_CARD_TRANSACTIONS_UPDATE: 'credit_card_transactions:update',
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
+  DASHBOARD_PEOPLE_EXPENSES: 'dashboard:people-expenses',
   
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
   SETTINGS_GDRIVE_LOGOUT: 'settings:gdrive:logout',
   SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
   SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore',
-  APP_GET_VERSION: 'app:get_version'
+  APP_GET_VERSION: 'app:get_version',
+
+  PEOPLE_GET: 'people:get',
+  PEOPLE_ADD: 'people:add',
+  PEOPLE_UPDATE: 'people:update',
+  PEOPLE_DELETE: 'people:delete',
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -61,6 +68,12 @@ contextBridge.exposeInMainWorld('api', {
     
     getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate }),
     getCategoryExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSES, { userId, startDate, endDate }),
+    getPeopleExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_PEOPLE_EXPENSES, { userId, startDate, endDate }),
+
+    getPeople: (userId) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_GET, userId),
+    addPerson: (person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_ADD, person),
+    updatePerson: (id, person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_UPDATE, { id, person }),
+    deletePerson: (id) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_DELETE, id),
 
     gdriveStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS),
     gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),

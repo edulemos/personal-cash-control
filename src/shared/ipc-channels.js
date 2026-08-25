@@ -24,6 +24,7 @@ const IPC_CHANNELS = {
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
+  DASHBOARD_PEOPLE_EXPENSES: 'dashboard:people-expenses',
 
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
   SETTINGS_GDRIVE_LOGIN: 'settings:gdrive:login',
@@ -31,7 +32,12 @@ const IPC_CHANNELS = {
   SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
   SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore',
   
-  APP_GET_VERSION: 'app:get_version'
+  APP_GET_VERSION: 'app:get_version',
+
+  PEOPLE_GET: 'people:get',
+  PEOPLE_ADD: 'people:add',
+  PEOPLE_UPDATE: 'people:update',
+  PEOPLE_DELETE: 'people:delete',
 };
 
 module.exports = { IPC_CHANNELS };

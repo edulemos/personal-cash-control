@@ -8,14 +8,26 @@ const setupTransactionsHandlers = () => {
     try {
       if (!userId || !startDate || !endDate) return [];
       const db = getDb();
-      const stmt = db.prepare(`
-        SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon
-        FROM transactions t
-        LEFT JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
-      `);
-      
-      let normalTxs = stmt.all(userId, startDate, endDate) || [];
+      try {
+        const stmt = db.prepare(`
+          SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
+                 p.name as person_name, p.avatar_color as person_avatar_color
+          FROM transactions t
+          LEFT JOIN categories c ON t.category_id = c.id
+          LEFT JOIN people p ON t.person_id = p.id
+          WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
+        `);
+        return stmt.all(userId, startDate, endDate) || [];
+      } catch (_) {
+        // Fallback sem JOIN (migration ainda não rodou)
+        const stmt = db.prepare(`
+          SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+          FROM transactions t
+          LEFT JOIN categories c ON t.category_id = c.id
+          WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
+        `);
+        return stmt.all(userId, startDate, endDate) || [];
+      }
       
       // Calcula as faturas de cartões de crédito para os meses no período de forma segura (sem fuso horário)
       const invoiceMonths = [];
@@ -75,12 +87,13 @@ const setupTransactionsHandlers = () => {
     }
   });
 
-  ipcMain.handle(IPC_CHANNELS.TRANSACTIONS_ADD, (event, { user_id, description, amount, type, date, category_id, is_fixed, is_paid }) => {
+  ipcMain.handle(IPC_CHANNELS.TRANSACTIONS_ADD, (event, { user_id, description, amount, type, date, category_id, is_fixed, is_paid, person_id }) => {
     try {
       const db = getDb();
       const isFixedVal = is_fixed ? 1 : 0;
       const isPaidVal = is_paid !== undefined ? (is_paid ? 1 : 0) : (type === 'income' ? 1 : 0);
-      const stmt = db.prepare('INSERT INTO transactions (user_id, description, amount, type, date, category_id, is_fixed, is_paid) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+      const personIdVal = person_id || null;
+      const stmt = db.prepare('INSERT INTO transactions (user_id, description, amount, type, date, category_id, is_fixed, is_paid, person_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
       
       let firstId = null;
       
@@ -90,7 +103,7 @@ const setupTransactionsHandlers = () => {
         
         for (let i = 0; i < iterations; i++) {
           const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const info = stmt.run(user_id, description, amount, type, formattedDate, category_id, isFixedVal, isPaidVal);
+          const info = stmt.run(user_id, description, amount, type, formattedDate, category_id, isFixedVal, isPaidVal, personIdVal);
           if (i === 0) firstId = Number(info.lastInsertRowid);
           
           month++;
@@ -129,10 +142,11 @@ const setupTransactionsHandlers = () => {
         return { success: true };
       }
 
-      const stmt = db.prepare('UPDATE transactions SET description = ?, amount = ?, type = ?, date = ?, category_id = ?, is_fixed = ?, is_paid = ? WHERE id = ?');
+      const stmt = db.prepare('UPDATE transactions SET description = ?, amount = ?, type = ?, date = ?, category_id = ?, is_fixed = ?, is_paid = ?, person_id = ? WHERE id = ?');
       const isPaidVal = transaction.is_paid !== undefined ? (transaction.is_paid ? 1 : 0) : 0;
+      const personIdVal = transaction.person_id || null;
       
-      stmt.run(transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category_id, transaction.is_fixed ? 1 : 0, isPaidVal, id);
+      stmt.run(transaction.description, transaction.amount, transaction.type, transaction.date, transaction.category_id, transaction.is_fixed ? 1 : 0, isPaidVal, personIdVal, id);
       return { success: true };
     } catch (err) {
       console.error('Erro em TRANSACTIONS_UPDATE:', err);
@@ -277,6 +291,78 @@ const setupTransactionsHandlers = () => {
         .sort((a, b) => b.value - a.value);
     } catch (err) {
       console.error('Erro em DASHBOARD_CATEGORY_EXPENSES:', err);
+      return [];
+    }
+  });
+
+  // Gastos por pessoa (transações gerais + cartões)
+  ipcMain.handle(IPC_CHANNELS.DASHBOARD_PEOPLE_EXPENSES, (event, { userId, startDate, endDate }) => {
+    try {
+      const db = getDb();
+      const map = {};
+
+      // 1. Transações gerais de despesa com pessoa vinculada
+      try {
+        const txStmt = db.prepare(`
+          SELECT p.id as person_id, p.name as person_name, p.avatar_color,
+                 SUM(t.amount) as total
+          FROM transactions t
+          JOIN people p ON t.person_id = p.id
+          WHERE t.user_id = ? AND t.type = 'expense' AND t.date >= ? AND t.date <= ?
+          GROUP BY p.id
+        `);
+        const rows = txStmt.all(userId, startDate, endDate) || [];
+        rows.forEach(r => {
+          map[r.person_id] = {
+            person_id: r.person_id,
+            person_name: r.person_name,
+            avatar_color: r.avatar_color || '#6366f1',
+            total: Number(r.total) || 0
+          };
+        });
+      } catch (_) {}
+
+      // 2. Transações de cartão no período com pessoa vinculada
+      try {
+        const invoiceMonths = [];
+        let [y, mo] = startDate.split('-').map(Number);
+        const [ey, em] = endDate.split('-').map(Number);
+        while (y < ey || (y === ey && mo <= em)) {
+          invoiceMonths.push(`${y}-${String(mo).padStart(2, '0')}`);
+          mo++;
+          if (mo > 12) { mo = 1; y++; }
+        }
+        if (invoiceMonths.length > 0) {
+          const cardStmt = db.prepare(`
+            SELECT p.id as person_id, p.name as person_name, p.avatar_color,
+                   SUM(t.amount) as total
+            FROM credit_card_transactions t
+            JOIN credit_cards cc ON t.credit_card_id = cc.id
+            JOIN people p ON t.person_id = p.id
+            WHERE cc.user_id = ? AND t.invoice_month IN (${invoiceMonths.map(() => '?').join(',')})
+            GROUP BY p.id
+          `);
+          const cardRows = cardStmt.all(userId, ...invoiceMonths) || [];
+          cardRows.forEach(r => {
+            if (map[r.person_id]) {
+              map[r.person_id].total += Number(r.total) || 0;
+            } else {
+              map[r.person_id] = {
+                person_id: r.person_id,
+                person_name: r.person_name,
+                avatar_color: r.avatar_color || '#6366f1',
+                total: Number(r.total) || 0
+              };
+            }
+          });
+        }
+      } catch (_) {}
+
+      return Object.values(map)
+        .filter(d => d.total > 0)
+        .sort((a, b) => b.total - a.total);
+    } catch (err) {
+      console.error('Erro em DASHBOARD_PEOPLE_EXPENSES:', err);
       return [];
     }
   });
