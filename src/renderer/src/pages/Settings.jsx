@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, Clock, Zap } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
@@ -8,9 +8,13 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [autoBackup, setAutoBackup] = useState({ interval: 'daily', lastBackup: null, nextBackup: null });
+  const [autoBackupLoading, setAutoBackupLoading] = useState(false);
+  const [manualBackupLoading, setManualBackupLoading] = useState(false);
 
   useEffect(() => {
     fetchStatus();
+    fetchAutoBackupConfig();
   }, []);
 
   const fetchStatus = async () => {
@@ -22,6 +26,29 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
       setError('Não foi possível verificar o status do Google Drive.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAutoBackupConfig = async () => {
+    try {
+      const config = await window.api.getAutoBackupConfig();
+      setAutoBackup(config);
+    } catch (err) {
+      console.error('Erro ao carregar config de auto-backup:', err);
+    }
+  };
+
+  const handleAutoBackupChange = async (interval) => {
+    setAutoBackupLoading(true);
+    try {
+      const result = await window.api.setAutoBackupInterval(interval);
+      if (result.success !== false) {
+        setAutoBackup({ interval: result.interval, lastBackup: result.lastBackup, nextBackup: result.nextBackup });
+      }
+    } catch (err) {
+      console.error('Erro ao salvar auto-backup:', err);
+    } finally {
+      setAutoBackupLoading(false);
     }
   };
 
@@ -212,6 +239,121 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
               Restaurar Backup
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Seção de Backup Automático */}
+      <div className="glass-panel p-8 max-w-3xl">
+        <div className="flex items-start gap-4 mb-6">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <Zap size={24} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-semibold">Backup Automático</h3>
+              {autoBackup.interval !== 'off' ? (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Ativo</span>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-text-muted border border-white/10">Inativo</span>
+              )}
+            </div>
+            <p className="text-text-muted mt-1 text-sm">
+              Envie o backup para o Google Drive automaticamente, sem precisar lembrar.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-5">
+          {/* Seletor de frequência */}
+          <div>
+            <label className="block text-sm font-medium mb-3">Frequência do backup</label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { value: 'off',        label: 'Desativado' },
+                { value: 'daily',      label: 'Diário' },
+                { value: 'every3days', label: 'A cada 3 dias' },
+                { value: 'weekly',     label: 'Semanal' },
+              ].map(option => (
+                <button
+                  key={option.value}
+                  id={`auto-backup-${option.value}`}
+                  onClick={() => handleAutoBackupChange(option.value)}
+                  disabled={autoBackupLoading}
+                  className={clsx(
+                    'px-3 py-2.5 rounded-lg text-sm font-medium transition-all border',
+                    autoBackup.interval === option.value
+                      ? 'bg-accent/20 border-accent text-accent'
+                      : 'bg-white/5 border-white/10 text-text-muted hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {autoBackupLoading && autoBackup.interval === option.value
+                    ? <Loader2 size={14} className="animate-spin mx-auto" />
+                    : option.label
+                  }
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Próximo backup */}
+          {autoBackup.interval !== 'off' && (
+            <div className="flex items-center gap-3 text-sm pt-1 border-t border-white/5">
+              <Clock size={15} className="text-text-muted shrink-0" />
+              {autoBackup.nextBackup ? (
+                <span className="text-text-muted">
+                  Próximo backup: <strong className="text-white">
+                    {new Date(autoBackup.nextBackup).toLocaleString('pt-BR')}
+                  </strong>
+                </span>
+              ) : (
+                <span className="text-text-muted">O backup será feito na próxima vez que o app abrir.</span>
+              )}
+            </div>
+          )}
+
+          {/* Último backup */}
+          {autoBackup.lastBackup && (
+            <div className="flex items-center gap-3 text-sm">
+              <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+              <span className="text-text-muted">
+                Último backup: <strong className="text-white">{new Date(autoBackup.lastBackup).toLocaleString('pt-BR')}</strong>
+              </span>
+            </div>
+          )}
+
+          {/* Backup manual — aparece somente quando o automático está desativado */}
+          {autoBackup.interval === 'off' && (
+            <div className="pt-1 border-t border-white/5">
+              <p className="text-xs text-text-muted mb-3">Como o backup automático está desativado, você pode salvar manualmente a qualquer momento.</p>
+              <button
+                id="btn-manual-backup"
+                onClick={async () => {
+                  setManualBackupLoading(true);
+                  setError(null);
+                  setSuccess(null);
+                  try {
+                    const result = await window.api.gdriveBackup();
+                    if (result.success) {
+                      setSuccess('Backup concluído com sucesso!');
+                      const config = await window.api.getAutoBackupConfig();
+                      setAutoBackup(config);
+                    } else {
+                      setError(result.error || 'Erro ao realizar backup.');
+                    }
+                  } catch (err) {
+                    setError('Erro ao realizar backup.');
+                  } finally {
+                    setManualBackupLoading(false);
+                  }
+                }}
+                disabled={manualBackupLoading || actionLoading}
+                className="inline-flex items-center gap-2 bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {manualBackupLoading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
+                Fazer Backup Agora
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

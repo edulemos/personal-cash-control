@@ -1,6 +1,7 @@
 const { ipcMain, app } = require('electron');
 const path = require('path');
 const gdriveService = require('../services/gdrive.service');
+const autoBackupService = require('../services/auto-backup.service');
 const { IPC_CHANNELS } = require('../../shared/ipc-channels');
 const { getDbPath, restoreDatabase } = require('../database/sqlite');
 
@@ -72,6 +73,25 @@ function setupSettingsHandlers() {
       return { success: true, requireRelogin: true };
     } catch (err) {
       console.error('Erro no restore:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SETTINGS_AUTO_BACKUP_GET, () => {
+    try {
+      return autoBackupService.getConfig();
+    } catch (err) {
+      console.error('Erro ao obter config de auto-backup:', err);
+      return { interval: 'off', lastBackup: null, nextBackup: null };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.SETTINGS_AUTO_BACKUP_SET, (event, interval) => {
+    try {
+      autoBackupService.setInterval(interval);
+      return { success: true, ...autoBackupService.getConfig() };
+    } catch (err) {
+      console.error('Erro ao definir auto-backup:', err);
       return { success: false, error: err.message };
     }
   });

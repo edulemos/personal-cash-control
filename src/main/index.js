@@ -62,6 +62,7 @@ const { setupAuthHandlers } = require('./ipc/auth.ipc');
 const { setupCreditCardsHandlers } = require('./ipc/creditCards.ipc');
 const setupSettingsHandlers = require('./ipc/settings.ipc');
 const { setupPeopleHandlers } = require('./ipc/people.ipc');
+const autoBackupService = require('./services/auto-backup.service');
 
 app.whenReady().then(() => {
   // Initialize Database and IPC before creating the window
@@ -72,6 +73,9 @@ app.whenReady().then(() => {
   setupCreditCardsHandlers();
   setupSettingsHandlers();
   setupPeopleHandlers();
+
+  // Inicia o serviço de backup automático
+  autoBackupService.start();
 
   // Permite imagens do CDN do Google (fotos de perfil OAuth)
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -116,3 +120,8 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+app.on('before-quit', () => {
+  autoBackupService.stop();
+});
+

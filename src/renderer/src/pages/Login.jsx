@@ -59,13 +59,7 @@ export default function Login({ onLoginSuccess }) {
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] pointer-events-none animate-pulse" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none animate-pulse" style={{ animationDelay: '1s' }} />
 
-      {/* Logo Superior Esquerda */}
-      <div className="absolute top-8 left-8 flex items-center gap-3 z-20">
-        <img src={logoImg} alt="Cash Control Logo" className="w-10 h-10 rounded-xl shadow-lg" />
-        <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-accent to-blue-400">
-          Cash Control
-        </span>
-      </div>
+
 
       {/* Card principal */}
       <div className="glass-panel w-full max-w-sm p-10 relative overflow-hidden z-10 flex flex-col items-center gap-8">

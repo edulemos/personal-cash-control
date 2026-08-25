@@ -31,6 +31,8 @@ const IPC_CHANNELS = {
   SETTINGS_GDRIVE_LOGOUT: 'settings:gdrive:logout',
   SETTINGS_GDRIVE_BACKUP: 'settings:gdrive:backup',
   SETTINGS_GDRIVE_RESTORE: 'settings:gdrive:restore',
+  SETTINGS_AUTO_BACKUP_GET: 'settings:auto-backup:get',
+  SETTINGS_AUTO_BACKUP_SET: 'settings:auto-backup:set',
   
   APP_GET_VERSION: 'app:get_version',
 

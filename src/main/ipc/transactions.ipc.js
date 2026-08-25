@@ -8,6 +8,7 @@ const setupTransactionsHandlers = () => {
     try {
       if (!userId || !startDate || !endDate) return [];
       const db = getDb();
+      let normalTxs = [];
       try {
         const stmt = db.prepare(`
           SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon,
@@ -17,7 +18,7 @@ const setupTransactionsHandlers = () => {
           LEFT JOIN people p ON t.person_id = p.id
           WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
         `);
-        return stmt.all(userId, startDate, endDate) || [];
+        normalTxs = stmt.all(userId, startDate, endDate) || [];
       } catch (_) {
         // Fallback sem JOIN (migration ainda não rodou)
         const stmt = db.prepare(`
@@ -26,7 +27,7 @@ const setupTransactionsHandlers = () => {
           LEFT JOIN categories c ON t.category_id = c.id
           WHERE t.user_id = ? AND t.date >= ? AND t.date <= ?
         `);
-        return stmt.all(userId, startDate, endDate) || [];
+        normalTxs = stmt.all(userId, startDate, endDate) || [];
       }
       
       // Calcula as faturas de cartões de crédito para os meses no período de forma segura (sem fuso horário)
