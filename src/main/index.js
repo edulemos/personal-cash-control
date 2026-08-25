@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen, session } = require('electron');
 const path = require('node:path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 const { autoUpdater } = require('electron-updater');
@@ -71,6 +71,23 @@ app.whenReady().then(() => {
   setupCreditCardsHandlers();
   setupSettingsHandlers();
 
+  // Permite imagens do CDN do Google (fotos de perfil OAuth)
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    const responseHeaders = { ...details.responseHeaders };
+    // Remove qualquer CSP existente vinda do servidor (Vite dev) para evitar conflito
+    delete responseHeaders['content-security-policy'];
+    delete responseHeaders['Content-Security-Policy'];
+    responseHeaders['Content-Security-Policy'] = [
+      "default-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; " +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com;"
+    ];
+    callback({ responseHeaders });
+  });
+
+
   const { ipcMain } = require('electron');
   ipcMain.handle('updater:restart', () => {
     autoUpdater.quitAndInstall();
@@ -82,7 +99,7 @@ app.whenReady().then(() => {
     autoUpdater.checkForUpdates();
   });
   ipcMain.handle('app:get_version', () => app.getVersion());
-  
+
   const win = createWindow();
 
   app.on('activate', () => {

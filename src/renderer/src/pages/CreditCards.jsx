@@ -20,7 +20,8 @@ export default function CreditCards({ userId, globalMonth }) {
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTxId, setEditingTxId] = useState(null);
 
-  const [cardForm, setCardForm] = useState({ name: '', due_day: 10, closing_day: 3 });
+  const DEFAULT_CARD_FORM = { name: '', due_day: 10, closing_day: 3 };
+  const [cardForm, setCardForm] = useState(DEFAULT_CARD_FORM);
   const [txForm, setTxForm] = useState({
     description: '', amount: '', date: new Date().toISOString().split('T')[0], category_id: '', installments: 1
   });
@@ -57,10 +58,15 @@ export default function CreditCards({ userId, globalMonth }) {
   useEffect(() => { fetchData(); }, [userId]);
   useEffect(() => { fetchTransactions(); }, [selectedCardId, globalMonth]);
 
+  const closeCardModal = () => {
+    setShowCardModal(false);
+    setCardForm({ name: '', due_day: 10, closing_day: 3 });
+  };
+
   const handleCardSubmit = async (e) => {
     e.preventDefault();
     await window.api.addCreditCard({ ...cardForm, user_id: userId, due_day: Number(cardForm.due_day), closing_day: Number(cardForm.closing_day) });
-    setShowCardModal(false);
+    closeCardModal();
     fetchData();
   };
 
@@ -281,7 +287,7 @@ export default function CreditCards({ userId, globalMonth }) {
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setShowCardModal(false)} className="px-4 py-2 text-text-muted">Cancelar</button>
+                <button type="button" onClick={closeCardModal} className="px-4 py-2 text-text-muted">Cancelar</button>
                 <button type="submit" className="bg-accent text-white px-4 py-2 rounded-lg font-medium">Salvar</button>
               </div>
             </form>

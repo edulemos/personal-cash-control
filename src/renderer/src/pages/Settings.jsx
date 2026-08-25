@@ -128,30 +128,17 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
 
       {/* Seção de Conta Google */}
       <div className="glass-panel p-8 max-w-3xl mb-8">
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 overflow-hidden">
-            {user?.picture
-              ? <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
-              : <Cloud size={24} />}
-          </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold">Conta Google</h3>
-            <p className="text-text-muted mt-1 text-sm">
-              Sua identidade e autorização de backup vinculadas à conta abaixo.
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0">
+        <div className="flex items-center justify-between gap-6">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0">
               {user?.picture
-                ? <img src={user.picture} alt={user.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full bg-accent/30 flex items-center justify-center text-accent font-bold text-lg">{user?.name?.[0]?.toUpperCase()}</div>}
+                ? <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                : <div className="w-full h-full bg-accent/30 flex items-center justify-center text-accent font-bold text-2xl">{user?.name?.[0]?.toUpperCase()}</div>}
             </div>
             <div>
-              <p className="font-semibold">{user?.name || 'Usuário'}</p>
+              <h3 className="text-xl font-semibold">{user?.name || 'Usuário'}</h3>
               <p className="text-sm text-text-muted">{user?.email || gdriveStatus.email}</p>
+              <p className="text-xs text-text-muted mt-1">Conta Google vinculada</p>
             </div>
           </div>
           <button
