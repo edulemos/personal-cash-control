@@ -19,6 +19,7 @@ nsis:
   allowToChangeInstallationDirectory: false
   shortcutName: "Cash Control"
   artifactName: "${productName} Setup ${version}.${ext}"
+  differentialPackage: false
 mac:
   target:
     - target: dmg
@@ -33,7 +34,9 @@ dmg:
   title: "${productName} ${version}"
   artifactName: "${productName} ${version}.${ext}"
 npmRebuild: false
+generateUpdatesFilesForAllChannels: false
 publish:
   provider: github
   owner: edulemos # Substitua pelo seu usuário no github
   repo: personal-cash-control
+  releaseType: draft
