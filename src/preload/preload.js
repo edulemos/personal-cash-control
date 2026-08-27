@@ -41,6 +41,8 @@ const IPC_CHANNELS = {
   PEOPLE_ADD: 'people:add',
   PEOPLE_UPDATE: 'people:update',
   PEOPLE_DELETE: 'people:delete',
+
+  DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -76,6 +78,8 @@ contextBridge.exposeInMainWorld('api', {
     addPerson: (person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_ADD, person),
     updatePerson: (id, person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_UPDATE, { id, person }),
     deletePerson: (id) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_DELETE, id),
+
+    getDescriptionSuggestions: (userId, query) => ipcRenderer.invoke(IPC_CHANNELS.DESCRIPTIONS_AUTOCOMPLETE, { userId, query }),
 
     gdriveStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS),
     gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),

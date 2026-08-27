@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
 import clsx from 'clsx';
+import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
 
 const getInitials = (name = '') =>
   name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -300,7 +301,14 @@ export default function Transactions({ userId, startDate, endDate }) {
                 </label>
               </div>
 
-              <input type="text" placeholder="Descrição" required className="w-full bg-bg-main border border-white/10 rounded-lg p-3 text-white outline-none focus:border-accent" value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+              <DescriptionAutocomplete
+                userId={userId}
+                value={form.description}
+                onChange={(val) => setForm({...form, description: val})}
+                placeholder="Descrição"
+                required
+                className="w-full bg-bg-main border border-white/10 rounded-lg p-3 text-white outline-none focus:border-accent"
+              />
               <input type="number" step="0.01" placeholder="Valor (R$)" required className="w-full bg-bg-main border border-white/10 rounded-lg p-3 text-white outline-none focus:border-accent" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} />
               <input type="date" required className="w-full bg-bg-main border border-white/10 rounded-lg p-3 text-white outline-none focus:border-accent" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
               

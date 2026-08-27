@@ -40,6 +40,8 @@ const IPC_CHANNELS = {
   PEOPLE_ADD: 'people:add',
   PEOPLE_UPDATE: 'people:update',
   PEOPLE_DELETE: 'people:delete',
+
+  DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
 };
 
 module.exports = { IPC_CHANNELS };

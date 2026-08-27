@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, CreditCard as CardIcon } from 'lucide-react';
 import clsx from 'clsx';
+import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
 
 const getInitials = (name = '') =>
   name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -330,7 +331,14 @@ export default function CreditCards({ userId, globalMonth }) {
           <div className="glass-panel w-full max-w-md p-6">
             <h2 className="text-xl font-bold mb-4">{editingTxId ? 'Editar Compra' : 'Nova Compra'}</h2>
             <form onSubmit={handleTxSubmit} className="space-y-4">
-              <input type="text" placeholder="Descrição" required className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={txForm.description} onChange={e => setTxForm({...txForm, description: e.target.value})} />
+              <DescriptionAutocomplete
+                userId={userId}
+                value={txForm.description}
+                onChange={(val) => setTxForm({...txForm, description: val})}
+                placeholder="Descrição"
+                required
+                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white"
+              />
               <div className="flex gap-4">
                 <input type="number" step="0.01" placeholder="Valor Total (R$)" required className="flex-[2] bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white" value={txForm.amount} onChange={e => setTxForm({...txForm, amount: e.target.value})} />
                 <input type="number" min="1" max="48" placeholder="Parcelas" required disabled={!!editingTxId} className="flex-1 bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white disabled:opacity-50" title="Número de Parcelas" value={txForm.installments} onChange={e => setTxForm({...txForm, installments: e.target.value})} />

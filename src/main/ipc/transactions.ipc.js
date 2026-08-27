@@ -368,6 +368,59 @@ const setupTransactionsHandlers = () => {
     }
   });
 
+  // Busca sugestões de descrição para autocomplete (ambas as tabelas)
+  ipcMain.handle(IPC_CHANNELS.DESCRIPTIONS_AUTOCOMPLETE, (event, { userId, query }) => {
+    try {
+      if (!userId) return [];
+      const db = getDb();
+      const q = `%${(query || '').trim()}%`;
+
+      // Busca descrições distintas de transações normais
+      let txRows = [];
+      try {
+        const stmt = db.prepare(`
+          SELECT description, COUNT(*) as freq
+          FROM transactions
+          WHERE user_id = ? AND description LIKE ?
+          GROUP BY description
+        `);
+        txRows = stmt.all(userId, q) || [];
+      } catch (_) {}
+
+      // Busca descrições distintas de transações de cartão de crédito
+      let cardRows = [];
+      try {
+        const stmt = db.prepare(`
+          SELECT t.description, COUNT(*) as freq
+          FROM credit_card_transactions t
+          JOIN credit_cards cc ON t.credit_card_id = cc.id
+          WHERE cc.user_id = ? AND t.description LIKE ?
+          GROUP BY t.description
+        `);
+        cardRows = stmt.all(userId, q) || [];
+      } catch (_) {}
+
+      // Mescla e remove duplicatas, somando frequências
+      const map = {};
+      [...txRows, ...cardRows].forEach(({ description, freq }) => {
+        const key = description.toLowerCase();
+        if (map[key]) {
+          map[key].freq += freq;
+        } else {
+          map[key] = { description, freq };
+        }
+      });
+
+      return Object.values(map)
+        .sort((a, b) => b.freq - a.freq || a.description.localeCompare(b.description))
+        .slice(0, 8)
+        .map(r => r.description);
+    } catch (err) {
+      console.error('Erro em DESCRIPTIONS_AUTOCOMPLETE:', err);
+      return [];
+    }
+  });
+
 };
 
 module.exports = { setupTransactionsHandlers };
