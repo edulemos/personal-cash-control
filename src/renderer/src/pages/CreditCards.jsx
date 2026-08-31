@@ -14,6 +14,7 @@ const formatCurrency = (value) => {
 export default function CreditCards({ userId, globalMonth }) {
   const [cards, setCards] = useState([]);
   const [selectedCardId, setSelectedCardId] = useState(null);
+  const [allCardsTotals, setAllCardsTotals] = useState({});
   
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -61,8 +62,31 @@ export default function CreditCards({ userId, globalMonth }) {
     } catch (err) { console.error('Erro ao buscar transações do cartão:', err); }
   };
 
+  const fetchAllCardsTotals = async () => {
+    if (!globalMonth) return;
+    try {
+      const cardsList = await window.api.getCreditCards(userId);
+      if (!Array.isArray(cardsList) || cardsList.length === 0) return;
+      const results = await Promise.all(
+        cardsList.map(async (c) => {
+          try {
+            const txs = await window.api.getCreditCardTransactions(c.id, globalMonth);
+            const total = Array.isArray(txs)
+              ? txs.reduce((acc, t) => acc + (Number(t.amount) || 0), 0)
+              : 0;
+            return { id: c.id, name: c.name, total };
+          } catch { return { id: c.id, name: c.name, total: 0 }; }
+        })
+      );
+      const totalsMap = {};
+      results.forEach((r) => { totalsMap[r.id] = r; });
+      setAllCardsTotals(totalsMap);
+    } catch (err) { console.error('Erro ao buscar totais dos cartões:', err); }
+  };
+
   useEffect(() => { fetchData(); }, [userId]);
   useEffect(() => { fetchTransactions(); }, [selectedCardId, globalMonth]);
+  useEffect(() => { if (userId) fetchAllCardsTotals(); }, [cards, globalMonth]);
 
   const closeCardModal = () => {
     setShowCardModal(false);
@@ -150,6 +174,9 @@ export default function CreditCards({ userId, globalMonth }) {
     return descMatch || catMatch;
   });
 
+  const grandTotal = Object.values(allCardsTotals).reduce((acc, c) => acc + c.total, 0);
+  const cardCount = Object.values(allCardsTotals).filter((c) => c.total > 0).length;
+
   return (
     <div className="flex flex-col h-full gap-6">
       <header className="flex justify-between items-end">
@@ -161,6 +188,86 @@ export default function CreditCards({ userId, globalMonth }) {
           <Plus size={20} /> Novo Cartão
         </button>
       </header>
+
+      {/* Totalizador geral de faturas */}
+      {cards.length > 0 && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.06) 100%)',
+            border: '1px solid rgba(239,68,68,0.2)',
+            borderRadius: '16px',
+            padding: '20px 28px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: 'rgba(239,68,68,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <CardIcon size={22} style={{ color: '#f87171' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: '13px', color: 'var(--color-text-muted, #94a3b8)', marginBottom: '2px' }}>
+                Total de Faturas &mdash;{' '}
+                {globalMonth
+                  ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(
+                      new Date(`${globalMonth}-02`)
+                    )
+                  : ''}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(248,113,113,0.7)' }}>
+                {cardCount} {cardCount === 1 ? 'cartão com gasto' : 'cartões com gastos'} neste mês
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div
+              style={{
+                fontSize: '32px',
+                fontWeight: '800',
+                color: '#f87171',
+                letterSpacing: '-0.5px',
+                lineHeight: 1,
+              }}
+            >
+              {formatCurrency(grandTotal)}
+            </div>
+            {Object.values(allCardsTotals).length > 1 && (
+              <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                {Object.values(allCardsTotals).map((c) => (
+                  c.total > 0 && (
+                    <span
+                      key={c.id}
+                      style={{
+                        fontSize: '11px',
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.15)',
+                        borderRadius: '20px',
+                        padding: '2px 10px',
+                        color: '#fca5a5',
+                      }}
+                    >
+                      {c.name}: {formatCurrency(c.total)}
+                    </span>
+                  )
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-6 flex-1 overflow-hidden">
         {/* Lista de Cartões (Sidebar esquerdo) */}
