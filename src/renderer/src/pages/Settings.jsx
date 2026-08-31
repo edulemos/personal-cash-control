@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, Clock, Zap } from 'lucide-react';
+import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, Clock, Zap, ShieldCheck, ShieldOff, Lock } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
@@ -12,9 +12,18 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
   const [autoBackupLoading, setAutoBackupLoading] = useState(false);
   const [manualBackupLoading, setManualBackupLoading] = useState(false);
 
+  // Estado do PIN
+  const [pinEnabled, setPinEnabled] = useState(false);
+  const [pinLoading, setPinLoading] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(null); // 'set' | 'disable'
+  const [pinInput, setPinInput] = useState('');
+  const [pinConfirm, setPinConfirm] = useState('');
+  const [pinError, setPinError] = useState('');
+
   useEffect(() => {
     fetchStatus();
     fetchAutoBackupConfig();
+    fetchPinStatus();
   }, []);
 
   const fetchStatus = async () => {
@@ -35,6 +44,70 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
       setAutoBackup(config);
     } catch (err) {
       console.error('Erro ao carregar config de auto-backup:', err);
+    }
+  };
+
+  const fetchPinStatus = async () => {
+    try {
+      const status = await window.api.pinStatus(user.id);
+      setPinEnabled(status.enabled);
+    } catch (err) {
+      console.error('Erro ao buscar status do PIN:', err);
+    }
+  };
+
+  const handleEnablePin = async () => {
+    setPinError('');
+    const trimmed = pinInput.trim();
+    if (!/^\d{4,8}$/.test(trimmed)) {
+      setPinError('O PIN deve conter entre 4 e 8 dígitos numéricos.');
+      return;
+    }
+    if (trimmed !== pinConfirm.trim()) {
+      setPinError('Os PINs não coincidem.');
+      return;
+    }
+    setPinLoading(true);
+    try {
+      const result = await window.api.pinSet(user.id, trimmed);
+      if (result.success) {
+        setPinEnabled(true);
+        setShowPinModal(null);
+        setPinInput('');
+        setPinConfirm('');
+      } else {
+        setPinError(result.message || 'Erro ao definir PIN.');
+      }
+    } catch (err) {
+      setPinError('Erro inesperado.');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  const handleDisablePin = async () => {
+    setPinError('');
+    const trimmed = pinInput.trim();
+    if (!trimmed) {
+      setPinError('Digite o PIN atual para desativar.');
+      return;
+    }
+    setPinLoading(true);
+    try {
+      const verify = await window.api.pinVerify(user.id, trimmed);
+      if (!verify.success) {
+        setPinError('PIN incorreto.');
+        setPinLoading(false);
+        return;
+      }
+      await window.api.pinRemove(user.id);
+      setPinEnabled(false);
+      setShowPinModal(null);
+      setPinInput('');
+    } catch (err) {
+      setPinError('Erro inesperado.');
+    } finally {
+      setPinLoading(false);
     }
   };
 
@@ -147,6 +220,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
   }
 
   return (
+    <>
     <div className="space-y-6 h-full flex flex-col">
       <header>
         <h2 className="text-2xl font-bold">Configurações</h2>
@@ -176,6 +250,83 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
             <LogOut size={16} />
             Sair da Conta
           </button>
+        </div>
+      </div>
+
+      {/* Seção de Proteção por PIN */}
+      <div className="glass-panel p-8 max-w-3xl">
+        <div className="flex items-start gap-4 mb-6">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            pinEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'
+          }`}>
+            {pinEnabled ? <ShieldCheck size={24} /> : <ShieldOff size={24} />}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-semibold">Proteção por PIN</h3>
+              {pinEnabled ? (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Ativo</span>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-text-muted border border-white/10">Inativo</span>
+              )}
+            </div>
+            <p className="text-text-muted mt-1 text-sm">
+              Adicione uma senha local de 4 a 8 dígitos para proteger o app. O login Google permanece ativo.
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-sm">{pinEnabled ? 'PIN ativado' : 'PIN desativado'}</p>
+              <p className="text-xs text-text-muted mt-0.5">
+                {pinEnabled
+                  ? 'O app exigirá o PIN na próxima vez que for aberto.'
+                  : 'Qualquer um com acesso ao computador pode entrar no app.'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPinError('');
+                setPinInput('');
+                setPinConfirm('');
+                setShowPinModal(pinEnabled ? 'disable' : 'set');
+              }}
+              className={clsx(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2',
+                pinEnabled
+                  ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/20'
+                  : 'bg-accent hover:bg-accent-hover text-white'
+              )}
+            >
+              <Lock size={15} />
+              {pinEnabled ? 'Desativar PIN' : 'Ativar PIN'}
+            </button>
+          </div>
+
+          {pinEnabled && (
+            <div className="pt-3 border-t border-white/5">
+              <button
+                onClick={() => {
+                  setPinError('');
+                  setPinInput('');
+                  setPinConfirm('');
+                  setShowPinModal('set');
+                }}
+                className="text-sm text-text-muted hover:text-white transition-colors underline"
+              >
+                Alterar PIN
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 pt-2 border-t border-white/5">
+            <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+            <p className="text-xs text-text-muted">
+              Esqueceu o PIN? Use o botão <strong className="text-white">"Esqueci meu PIN"</strong> na tela de bloqueio para recuperar acesso via login Google.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -436,5 +587,87 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
         </div>
       </div>
     </div>
+
+      {/* Modal de PIN */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-sm p-6 space-y-5">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Lock size={18} className="text-accent" />
+                {showPinModal === 'set'
+                  ? (pinEnabled ? 'Alterar PIN' : 'Criar PIN')
+                  : 'Desativar PIN'}
+              </h3>
+              <p className="text-sm text-text-muted mt-1">
+                {showPinModal === 'set'
+                  ? 'Digite um PIN numérico de 4 a 8 dígitos.'
+                  : 'Digite o PIN atual para confirmar a desativação.'}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-text-muted mb-1 block">
+                  {showPinModal === 'disable' ? 'PIN atual' : 'Novo PIN'}
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="••••"
+                  value={pinInput}
+                  onChange={(e) => { setPinInput(e.target.value.replace(/\D/g, '')); setPinError(''); }}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white text-center tracking-widest text-xl"
+                  autoFocus
+                />
+              </div>
+              {showPinModal === 'set' && (
+                <div>
+                  <label className="text-xs text-text-muted mb-1 block">Confirmar PIN</label>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={8}
+                    placeholder="••••"
+                    value={pinConfirm}
+                    onChange={(e) => { setPinConfirm(e.target.value.replace(/\D/g, '')); setPinError(''); }}
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent text-white text-center tracking-widest text-xl"
+                  />
+                </div>
+              )}
+              {pinError && (
+                <p className="text-xs text-rose-400 flex items-center gap-1">
+                  <AlertTriangle size={12} /> {pinError}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowPinModal(null); setPinInput(''); setPinConfirm(''); setPinError(''); }}
+                disabled={pinLoading}
+                className="px-4 py-2 text-text-muted hover:text-white transition-colors text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={showPinModal === 'set' ? handleEnablePin : handleDisablePin}
+                disabled={pinLoading}
+                className={clsx(
+                  'px-5 py-2 rounded-lg font-medium text-sm inline-flex items-center gap-2 disabled:opacity-50',
+                  showPinModal === 'disable'
+                    ? 'bg-rose-500/80 hover:bg-rose-500 text-white'
+                    : 'bg-accent hover:bg-accent-hover text-white'
+                )}
+              >
+                {pinLoading && <Loader2 size={15} className="animate-spin" />}
+                {showPinModal === 'set' ? (pinEnabled ? 'Alterar' : 'Ativar') : 'Desativar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

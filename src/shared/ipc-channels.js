@@ -42,6 +42,11 @@ const IPC_CHANNELS = {
   PEOPLE_DELETE: 'people:delete',
 
   DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
+
+  PIN_STATUS: 'pin:status',
+  PIN_SET: 'pin:set',
+  PIN_VERIFY: 'pin:verify',
+  PIN_REMOVE: 'pin:remove',
 };
 
 module.exports = { IPC_CHANNELS };

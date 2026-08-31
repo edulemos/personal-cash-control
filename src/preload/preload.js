@@ -43,6 +43,11 @@ const IPC_CHANNELS = {
   PEOPLE_DELETE: 'people:delete',
 
   DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
+
+  PIN_STATUS: 'pin:status',
+  PIN_SET: 'pin:set',
+  PIN_VERIFY: 'pin:verify',
+  PIN_REMOVE: 'pin:remove',
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -80,6 +85,11 @@ contextBridge.exposeInMainWorld('api', {
     deletePerson: (id) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_DELETE, id),
 
     getDescriptionSuggestions: (userId, query) => ipcRenderer.invoke(IPC_CHANNELS.DESCRIPTIONS_AUTOCOMPLETE, { userId, query }),
+
+    pinStatus: (userId) => ipcRenderer.invoke(IPC_CHANNELS.PIN_STATUS, userId),
+    pinSet: (userId, pin) => ipcRenderer.invoke(IPC_CHANNELS.PIN_SET, { userId, pin }),
+    pinVerify: (userId, pin) => ipcRenderer.invoke(IPC_CHANNELS.PIN_VERIFY, { userId, pin }),
+    pinRemove: (userId) => ipcRenderer.invoke(IPC_CHANNELS.PIN_REMOVE, userId),
 
     gdriveStatus: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS),
     gdriveLogin: () => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN),

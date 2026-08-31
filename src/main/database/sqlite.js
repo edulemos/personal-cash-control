@@ -183,6 +183,19 @@ const initDb = () => {
           db.exec(`ALTER TABLE credit_card_transactions ADD COLUMN person_id INTEGER;`);
         }
       }
+    },
+    {
+      id: 7,
+      name: '007_add_pin_to_users',
+      up: () => {
+        // Proteção opcional por PIN — hash SHA-256 da senha local
+        if (!hasColumn(db, 'users', 'pin_hash')) {
+          db.exec(`ALTER TABLE users ADD COLUMN pin_hash TEXT;`);
+        }
+        if (!hasColumn(db, 'users', 'pin_enabled')) {
+          db.exec(`ALTER TABLE users ADD COLUMN pin_enabled INTEGER DEFAULT 0;`);
+        }
+      }
     }
   ];
 

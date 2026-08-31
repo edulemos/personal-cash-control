@@ -6,6 +6,7 @@ import CreditCards from './pages/CreditCards';
 import People from './pages/People';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
+import PinLock from './pages/PinLock';
 import { LayoutDashboard, Receipt, Tags, CreditCard, Users, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -14,6 +15,7 @@ function App() {
   const [currentView, setCurrentView] = useState('dashboard');
   const [updateStatus, setUpdateStatus] = useState(null);
   const [appVersion, setAppVersion] = useState('');
+  const [pinLocked, setPinLocked] = useState(false);
   
   // Mês global (formato YYYY-MM)
   const [globalMonth, setGlobalMonth] = useState(() => {
@@ -52,7 +54,34 @@ function App() {
   }, [globalMonth]);
 
   if (!user) {
-    return <Login onLoginSuccess={setUser} />;
+    return (
+      <Login
+        onLoginSuccess={async (loggedUser) => {
+          setUser(loggedUser);
+          // Verifica se o PIN está habilitado após o login
+          try {
+            const pinStatus = await window.api.pinStatus(loggedUser.id);
+            setPinLocked(pinStatus.enabled);
+          } catch (_) {
+            setPinLocked(false);
+          }
+        }}
+      />
+    );
+  }
+
+  if (pinLocked) {
+    return (
+      <PinLock
+        user={user}
+        onUnlock={() => setPinLocked(false)}
+        onForgotPin={(refreshedUser) => {
+          // Após re-login Google com sucesso, PIN já foi removido no main process
+          setUser(refreshedUser);
+          setPinLocked(false);
+        }}
+      />
+    );
   }
 
   return (
