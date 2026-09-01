@@ -196,6 +196,35 @@ const initDb = () => {
           db.exec(`ALTER TABLE users ADD COLUMN pin_enabled INTEGER DEFAULT 0;`);
         }
       }
+    },
+    {
+      id: 8,
+      name: '008_add_banks_and_deposits',
+      up: () => {
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS banks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            color TEXT NOT NULL DEFAULT '#6366f1',
+            icon TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+          );
+
+          CREATE TABLE IF NOT EXISTS deposits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            bank_id INTEGER,
+            description TEXT NOT NULL,
+            amount REAL NOT NULL,
+            date TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'realized')),
+            is_fixed BOOLEAN DEFAULT 0,
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            FOREIGN KEY(bank_id) REFERENCES banks(id)
+          );
+        `);
+      }
     }
   ];
 

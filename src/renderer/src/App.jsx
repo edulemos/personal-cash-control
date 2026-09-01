@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
+import Receivables from './pages/Receivables';
 import Categories from './pages/Categories';
 import CreditCards from './pages/CreditCards';
 import People from './pages/People';
 import Settings from './pages/Settings';
 import Login from './pages/Login';
 import PinLock from './pages/PinLock';
-import { LayoutDashboard, Receipt, Tags, CreditCard, Users, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Tags, CreditCard, Users, Settings as SettingsIcon, LogOut, ArrowDownToLine } from 'lucide-react';
 import clsx from 'clsx';
 
 function App() {
@@ -120,6 +121,18 @@ function App() {
             Transações
           </button>
           <button
+            onClick={() => setCurrentView('receivables')}
+            className={clsx(
+              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium',
+              currentView === 'receivables'
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-muted hover:bg-white/5 hover:text-white'
+            )}
+          >
+            <ArrowDownToLine size={20} />
+            Recebimentos
+          </button>
+          <button
             onClick={() => setCurrentView('credit_cards')}
             className={clsx(
               'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium',
@@ -212,6 +225,7 @@ function App() {
         <div className="flex-1 overflow-auto p-8 pt-16">
           {currentView === 'dashboard' && <Dashboard userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
+          {currentView === 'receivables' && <Receivables userId={user.id} startDate={startDate} endDate={endDate} />}
           {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
           {currentView === 'people' && <People userId={user.id} />}

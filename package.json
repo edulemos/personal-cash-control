@@ -1,6 +1,6 @@
 {
   "name": "personal-cash-control",
-  "version": "0.7.0-beta",
+  "version": "0.8.0-beta",
   "description": "Personal Cash Control with Electron",
   "author": "Eduardo Lemos",
   "main": "src/main/index.js",

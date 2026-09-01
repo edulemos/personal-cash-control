@@ -170,15 +170,15 @@ const setupTransactionsHandlers = () => {
   ipcMain.handle(IPC_CHANNELS.DASHBOARD_STATS, (event, { userId, startDate, endDate }) => {
     try {
       if (!userId || !startDate || !endDate) {
-        return { income: 0, expensePaid: 0, expensePending: 0, balance: 0 };
+        return { depositRealized: 0, depositPending: 0, expensePaid: 0, expensePending: 0, balance: 0, netBalance: 0, income: 0 };
       }
 
       const db = getDb();
       
-      // Busca transações normais
+      // Busca apenas despesas (income foi migrado para deposits)
       const stmt = db.prepare(`
         SELECT amount, type, is_paid FROM transactions
-        WHERE user_id = ? AND date >= ? AND date <= ?
+        WHERE user_id = ? AND date >= ? AND date <= ? AND type = 'expense'
       `);
       const transactions = stmt.all(userId, startDate, endDate) || [];
       
@@ -220,11 +220,23 @@ const setupTransactionsHandlers = () => {
           console.warn('Aviso: Não foi possível carregar faturas para o dashboard:', cardErr.message);
         }
       }
+
+      // Busca depósitos (recebimentos) do período
+      let deposits = [];
+      try {
+        const depStmt = db.prepare(`
+          SELECT amount, status FROM deposits
+          WHERE user_id = ? AND date >= ? AND date <= ?
+        `);
+        deposits = depStmt.all(userId, startDate, endDate) || [];
+      } catch (depErr) {
+        console.warn('Aviso: Não foi possível carregar depósitos para o dashboard:', depErr.message);
+      }
       
-      return calculateDashboardStats(transactions);
+      return calculateDashboardStats(transactions, deposits);
     } catch (err) {
       console.error('Erro em DASHBOARD_STATS:', err);
-      return { income: 0, expensePaid: 0, expensePending: 0, balance: 0 };
+      return { depositRealized: 0, depositPending: 0, expensePaid: 0, expensePending: 0, balance: 0, netBalance: 0, income: 0 };
     }
   });
 

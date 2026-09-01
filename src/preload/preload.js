@@ -42,6 +42,17 @@ const IPC_CHANNELS = {
   PEOPLE_UPDATE: 'people:update',
   PEOPLE_DELETE: 'people:delete',
 
+  BANKS_GET: 'banks:get',
+  BANKS_ADD: 'banks:add',
+  BANKS_UPDATE: 'banks:update',
+  BANKS_DELETE: 'banks:delete',
+
+  DEPOSITS_GET: 'deposits:get',
+  DEPOSITS_ADD: 'deposits:add',
+  DEPOSITS_UPDATE: 'deposits:update',
+  DEPOSITS_DELETE: 'deposits:delete',
+  DEPOSITS_TOGGLE_STATUS: 'deposits:toggle-status',
+
   DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
 
   PIN_STATUS: 'pin:status',
@@ -83,6 +94,17 @@ contextBridge.exposeInMainWorld('api', {
     addPerson: (person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_ADD, person),
     updatePerson: (id, person) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_UPDATE, { id, person }),
     deletePerson: (id) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_DELETE, id),
+
+    getBanks: (userId) => ipcRenderer.invoke(IPC_CHANNELS.BANKS_GET, userId),
+    addBank: (bank) => ipcRenderer.invoke(IPC_CHANNELS.BANKS_ADD, bank),
+    updateBank: (id, bank) => ipcRenderer.invoke(IPC_CHANNELS.BANKS_UPDATE, { id, bank }),
+    deleteBank: (id) => ipcRenderer.invoke(IPC_CHANNELS.BANKS_DELETE, id),
+
+    getDeposits: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DEPOSITS_GET, { userId, startDate, endDate }),
+    addDeposit: (deposit) => ipcRenderer.invoke(IPC_CHANNELS.DEPOSITS_ADD, deposit),
+    updateDeposit: (id, deposit) => ipcRenderer.invoke(IPC_CHANNELS.DEPOSITS_UPDATE, { id, deposit }),
+    deleteDeposit: (id) => ipcRenderer.invoke(IPC_CHANNELS.DEPOSITS_DELETE, id),
+    toggleDepositStatus: (id) => ipcRenderer.invoke(IPC_CHANNELS.DEPOSITS_TOGGLE_STATUS, id),
 
     getDescriptionSuggestions: (userId, query) => ipcRenderer.invoke(IPC_CHANNELS.DESCRIPTIONS_AUTOCOMPLETE, { userId, query }),
 

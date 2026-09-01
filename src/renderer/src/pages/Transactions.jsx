@@ -151,7 +151,7 @@ export default function Transactions({ userId, startDate, endDate }) {
       <header className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold">Transações</h2>
-          <p className="text-text-muted">Gerencie suas receitas e despesas</p>
+          <p className="text-text-muted">Gerencie suas despesas</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -178,13 +178,13 @@ export default function Transactions({ userId, startDate, endDate }) {
           <button 
               onClick={() => {
                 setEditingId(null);
-                setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false });
+                setForm({ description: '', amount: '', type: 'expense', date: new Date().toISOString().split('T')[0], category_id: '', is_fixed: false, is_paid: false, person_id: '' });
                 setShowModal(true);
               }} 
               className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 transition-colors"
             >
             <Plus size={20} />
-            Nova Transação
+            Nova Despesa
           </button>
         </div>
       </header>
@@ -286,20 +286,12 @@ export default function Transactions({ userId, startDate, endDate }) {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-md p-6 relative overflow-hidden">
-            <h2 className="text-xl font-bold mb-6">{editingId ? 'Editar Transação' : 'Nova Transação'}</h2>
+            <h2 className="text-xl font-bold mb-6">{editingId ? 'Editar Despesa' : 'Nova Despesa'}</h2>
             
             <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
               
-              <div className="flex gap-4 mb-2">
-                <label className="flex-1 cursor-pointer">
-                  <input type="radio" name="type" className="peer sr-only" checked={form.type === 'expense'} onChange={() => setForm({...form, type: 'expense'})} />
-                  <div className="text-center p-3 rounded-lg border border-white/10 peer-checked:border-rose-500 peer-checked:bg-rose-500/10 peer-checked:text-rose-400 transition-all">Despesa</div>
-                </label>
-                <label className="flex-1 cursor-pointer">
-                  <input type="radio" name="type" className="peer sr-only" checked={form.type === 'income'} onChange={() => setForm({...form, type: 'income'})} />
-                  <div className="text-center p-3 rounded-lg border border-white/10 peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-400 transition-all">Receita</div>
-                </label>
-              </div>
+              {/* Tipo removido: despesas são o único tipo nesta tela */}
+              {/* Recebimentos são gerenciados em: Recebimentos > Depósitos */}
 
               <DescriptionAutocomplete
                 userId={userId}

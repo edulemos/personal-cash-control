@@ -41,6 +41,17 @@ const IPC_CHANNELS = {
   PEOPLE_UPDATE: 'people:update',
   PEOPLE_DELETE: 'people:delete',
 
+  BANKS_GET: 'banks:get',
+  BANKS_ADD: 'banks:add',
+  BANKS_UPDATE: 'banks:update',
+  BANKS_DELETE: 'banks:delete',
+
+  DEPOSITS_GET: 'deposits:get',
+  DEPOSITS_ADD: 'deposits:add',
+  DEPOSITS_UPDATE: 'deposits:update',
+  DEPOSITS_DELETE: 'deposits:delete',
+  DEPOSITS_TOGGLE_STATUS: 'deposits:toggle-status',
+
   DESCRIPTIONS_AUTOCOMPLETE: 'descriptions:autocomplete',
 
   PIN_STATUS: 'pin:status',
