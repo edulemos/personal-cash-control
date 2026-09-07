@@ -1,6 +1,7 @@
 const { ipcMain } = require('electron');
 const { getDb } = require('../database/sqlite');
 const { IPC_CHANNELS } = require('../../shared/ipc-channels');
+const { calculateInstallments } = require('../services/creditCards.service');
 
 const setupCreditCardsHandlers = () => {
   // --- CARDS ---
@@ -95,8 +96,8 @@ const setupCreditCardsHandlers = () => {
       if (!card) throw new Error('Cartão não encontrado.');
       
       const [year, month, day] = tx.date.split('-').map(Number);
-      const installments = tx.installments || 1;
-      const installmentAmount = tx.amount / installments;
+      const installmentAmounts = calculateInstallments(tx.amount, tx.installments);
+      const installments = installmentAmounts.length;
       
       const insertStmt = db.prepare(`
         INSERT INTO credit_card_transactions 
@@ -120,11 +121,12 @@ const setupCreditCardsHandlers = () => {
           baseInvoiceDate.setMonth(baseInvoiceDate.getMonth() + i);
           
           const invoiceMonth = `${baseInvoiceDate.getFullYear()}-${String(baseInvoiceDate.getMonth() + 1).padStart(2, '0')}`;
-          
+          const currentInstallmentAmount = installmentAmounts[i];
+
           insertStmt.run(
             tx.credit_card_id,
             tx.description,
-            installmentAmount,
+            currentInstallmentAmount,
             tx.date,
             tx.category_id,
             installments,
@@ -146,7 +148,7 @@ const setupCreditCardsHandlers = () => {
     try {
       const db = getDb();
       const description = tx.description !== undefined ? tx.description : null;
-      const amount = tx.amount !== undefined ? Number(tx.amount) : null;
+      const amount = tx.amount !== undefined ? Math.round(Number(tx.amount) * 100) / 100 : null;
       const categoryId = tx.category_id !== undefined ? Number(tx.category_id) : null;
       const personId = tx.person_id !== undefined ? (tx.person_id || null) : null;
       try {

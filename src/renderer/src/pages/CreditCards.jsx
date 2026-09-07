@@ -124,7 +124,7 @@ export default function CreditCards({ userId, globalMonth }) {
     const payload = {
       ...txForm,
       credit_card_id: selectedCardId,
-      amount: Number(txForm.amount),
+      amount: Math.round(Number(txForm.amount) * 100) / 100,
       installments: Number(txForm.installments),
       category_id: Number(txForm.category_id),
       person_id: txForm.person_id ? Number(txForm.person_id) : null
@@ -142,9 +142,11 @@ export default function CreditCards({ userId, globalMonth }) {
   };
 
   const openEditTx = (t) => {
+    const rawAmount = Number(t.amount);
+    const formattedAmount = isNaN(rawAmount) ? '' : (Math.round(rawAmount * 100) / 100).toFixed(2);
     setTxForm({
       description: t.description,
-      amount: t.amount,
+      amount: formattedAmount,
       date: t.date,
       category_id: t.category_id || '',
       installments: t.installments,

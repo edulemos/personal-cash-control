@@ -235,6 +235,13 @@ const initDb = () => {
           db.exec(`ALTER TABLE credit_card_transactions ADD COLUMN is_checked BOOLEAN DEFAULT 0;`);
         }
       }
+    },
+    {
+      id: 10,
+      name: '010_round_credit_card_transaction_amounts',
+      up: () => {
+        db.exec(`UPDATE credit_card_transactions SET amount = ROUND(amount, 2);`);
+      }
     }
   ];
 
