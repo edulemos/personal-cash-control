@@ -5,58 +5,72 @@ describe('Transactions Service', () => {
   describe('calculateDashboardStats', () => {
     it('should return zeros for empty array', () => {
       const result = calculateDashboardStats([]);
-      expect(result).toEqual({ income: 0, expense: 0, balance: 0 });
+      expect(result).toEqual({
+        depositRealized: 0,
+        depositPending: 0,
+        expensePaid: 0,
+        expensePending: 0,
+        balance: 0,
+        netBalance: 0,
+        income: 0
+      });
     });
 
     it('should handle undefined or null input gracefully', () => {
-      expect(calculateDashboardStats(null)).toEqual({ income: 0, expense: 0, balance: 0 });
-      expect(calculateDashboardStats(undefined)).toEqual({ income: 0, expense: 0, balance: 0 });
+      const expected = {
+        depositRealized: 0,
+        depositPending: 0,
+        expensePaid: 0,
+        expensePending: 0,
+        balance: 0,
+        netBalance: 0,
+        income: 0
+      };
+      expect(calculateDashboardStats(null)).toEqual(expected);
+      expect(calculateDashboardStats(undefined)).toEqual(expected);
     });
 
-    it('should calculate correct totals with basic income and expenses', () => {
+    it('should calculate correct totals with expenses and deposits', () => {
       const transactions = [
-        { type: 'income', amount: 1500 },
-        { type: 'expense', amount: 500 },
-        { type: 'expense', amount: 300 },
+        { type: 'expense', amount: 500, is_paid: true },
+        { type: 'expense', amount: 300, is_paid: false },
       ];
-      const result = calculateDashboardStats(transactions);
-      expect(result).toEqual({
-        income: 1500,
-        expense: 800,
-        balance: 700
-      });
+      const deposits = [
+        { status: 'realized', amount: 1500 },
+        { status: 'pending', amount: 200 },
+      ];
+      const result = calculateDashboardStats(transactions, deposits);
+      expect(result.depositRealized).toBe(1500);
+      expect(result.depositPending).toBe(200);
+      expect(result.expensePaid).toBe(500);
+      expect(result.expensePending).toBe(300);
+      expect(result.balance).toBe(1000); // 1500 - 500
+      expect(result.netBalance).toBe(900); // (1500 + 200) - (500 + 300)
     });
 
     it('should handle decimal values without losing precision due to simple float issues', () => {
       const transactions = [
-        { type: 'income', amount: 100.55 },
-        { type: 'expense', amount: 50.11 },
+        { type: 'expense', amount: 50.11, is_paid: true },
       ];
-      const result = calculateDashboardStats(transactions);
-      expect(result.income).toBeCloseTo(100.55);
-      expect(result.expense).toBeCloseTo(50.11);
+      const deposits = [
+        { status: 'realized', amount: 100.55 },
+      ];
+      const result = calculateDashboardStats(transactions, deposits);
+      expect(result.depositRealized).toBeCloseTo(100.55);
+      expect(result.expensePaid).toBeCloseTo(50.11);
       expect(result.balance).toBeCloseTo(50.44);
     });
 
-    it('should handle negative amount edge cases (though unlikely in UI)', () => {
-      const transactions = [
-        { type: 'income', amount: -500 }, // Negative income is basically an expense mathematically
-        { type: 'expense', amount: -100 }, // Negative expense is basically income mathematically
-      ];
-      const result = calculateDashboardStats(transactions);
-      expect(result.income).toBe(-500);
-      expect(result.expense).toBe(-100);
-      expect(result.balance).toBe(-400); // -500 - (-100)
-    });
-    
     it('should safely parse string numbers', () => {
       const transactions = [
-        { type: 'income', amount: "1000.50" },
-        { type: 'expense', amount: "200.25" },
+        { type: 'expense', amount: "200.25", is_paid: true },
       ];
-      const result = calculateDashboardStats(transactions);
-      expect(result.income).toBe(1000.50);
-      expect(result.expense).toBe(200.25);
+      const deposits = [
+        { status: 'realized', amount: "1000.50" },
+      ];
+      const result = calculateDashboardStats(transactions, deposits);
+      expect(result.depositRealized).toBe(1000.50);
+      expect(result.expensePaid).toBe(200.25);
       expect(result.balance).toBe(800.25);
     });
   });

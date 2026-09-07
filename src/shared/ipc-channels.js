@@ -21,6 +21,8 @@ const IPC_CHANNELS = {
   CREDIT_CARD_TRANSACTIONS_ADD: 'credit_card_transactions:add',
   CREDIT_CARD_TRANSACTIONS_UPDATE: 'credit_card_transactions:update',
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
+  CREDIT_CARD_TRANSACTIONS_TOGGLE_CHECK: 'credit_card_transactions:toggle_check',
+  CREDIT_CARD_TRANSACTIONS_CHECK_ALL: 'credit_card_transactions:check_all',
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',

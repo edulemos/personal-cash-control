@@ -121,6 +121,7 @@ const initDb = () => {
             installments INTEGER DEFAULT 1,
             installment_number INTEGER DEFAULT 1,
             invoice_month TEXT NOT NULL,
+            is_checked BOOLEAN DEFAULT 0,
             FOREIGN KEY(credit_card_id) REFERENCES credit_cards(id),
             FOREIGN KEY(category_id) REFERENCES categories(id)
           );
@@ -224,6 +225,15 @@ const initDb = () => {
             FOREIGN KEY(bank_id) REFERENCES banks(id)
           );
         `);
+      }
+    },
+    {
+      id: 9,
+      name: '009_add_is_checked_to_credit_card_transactions',
+      up: () => {
+        if (!hasColumn(db, 'credit_card_transactions', 'is_checked')) {
+          db.exec(`ALTER TABLE credit_card_transactions ADD COLUMN is_checked BOOLEAN DEFAULT 0;`);
+        }
       }
     }
   ];

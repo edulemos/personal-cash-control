@@ -175,6 +175,34 @@ const setupCreditCardsHandlers = () => {
       return { success: false, error: err.message };
     }
   });
+
+  ipcMain.handle(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_TOGGLE_CHECK, (event, { id, is_checked }) => {
+    try {
+      if (!id) throw new Error('ID da transação não fornecido.');
+      const db = getDb();
+      const isCheckedVal = is_checked ? 1 : 0;
+      const stmt = db.prepare('UPDATE credit_card_transactions SET is_checked = ? WHERE id = ?');
+      stmt.run(isCheckedVal, id);
+      return { success: true, is_checked: isCheckedVal };
+    } catch (err) {
+      console.error('Erro em CREDIT_CARD_TRANSACTIONS_TOGGLE_CHECK:', err);
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_CHECK_ALL, (event, { creditCardId, invoiceMonth, is_checked }) => {
+    try {
+      if (!creditCardId || !invoiceMonth) throw new Error('Cartão e mês da fatura são obrigatórios.');
+      const db = getDb();
+      const isCheckedVal = is_checked ? 1 : 0;
+      const stmt = db.prepare('UPDATE credit_card_transactions SET is_checked = ? WHERE credit_card_id = ? AND invoice_month = ?');
+      stmt.run(isCheckedVal, creditCardId, invoiceMonth);
+      return { success: true, is_checked: isCheckedVal };
+    } catch (err) {
+      console.error('Erro em CREDIT_CARD_TRANSACTIONS_CHECK_ALL:', err);
+      return { success: false, error: err.message };
+    }
+  });
 };
 
 module.exports = { setupCreditCardsHandlers };
