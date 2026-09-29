@@ -7,7 +7,9 @@ import {
   Circle,
   CheckCheck,
   ShieldCheck,
-  RotateCcw
+  RotateCcw,
+  CalendarClock,
+  Pencil
 } from 'lucide-react';
 import clsx from 'clsx';
 import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
@@ -33,9 +35,16 @@ export default function CreditCards({ userId, globalMonth }) {
 
   // Modals state
   const [showCardModal, setShowCardModal] = useState(false);
+  const [editingCardId, setEditingCardId] = useState(null);
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTxId, setEditingTxId] = useState(null);
   const [txError, setTxError] = useState('');
+
+  // Invoice closing day state
+  const [invoiceInfo, setInvoiceInfo] = useState(null);
+  const [showClosingDayModal, setShowClosingDayModal] = useState(false);
+  const [customClosingInput, setCustomClosingInput] = useState('');
+  const [closingDayError, setClosingDayError] = useState('');
 
   const DEFAULT_CARD_FORM = { name: '', due_day: 10, closing_day: 3 };
   const [cardForm, setCardForm] = useState(DEFAULT_CARD_FORM);
@@ -58,6 +67,21 @@ export default function CreditCards({ userId, globalMonth }) {
       const ppl = await window.api.getPeople(userId);
       if (Array.isArray(ppl)) setPeople(ppl);
     } catch (err) { console.error('Erro ao buscar cartões:', err); }
+  };
+
+  const fetchInvoiceInfo = async () => {
+    if (!selectedCardId || !globalMonth) {
+      setInvoiceInfo(null);
+      return;
+    }
+    try {
+      if (window.api.getCreditCardInvoice) {
+        const inv = await window.api.getCreditCardInvoice(selectedCardId, globalMonth);
+        setInvoiceInfo(inv);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar detalhes da fatura:', err);
+    }
   };
 
   const fetchTransactions = async () => {
@@ -99,19 +123,100 @@ export default function CreditCards({ userId, globalMonth }) {
   };
 
   useEffect(() => { fetchData(); }, [userId]);
-  useEffect(() => { fetchTransactions(); }, [selectedCardId, globalMonth]);
+  useEffect(() => {
+    fetchTransactions();
+    fetchInvoiceInfo();
+  }, [selectedCardId, globalMonth]);
   useEffect(() => { if (userId) fetchAllCardsTotals(); }, [cards, globalMonth]);
+
+  const openNewCardModal = () => {
+    setEditingCardId(null);
+    setCardForm(DEFAULT_CARD_FORM);
+    setShowCardModal(true);
+  };
+
+  const openEditCardModal = (c) => {
+    setEditingCardId(c.id);
+    setCardForm({
+      name: c.name,
+      due_day: c.due_day,
+      closing_day: c.closing_day
+    });
+    setShowCardModal(true);
+  };
 
   const closeCardModal = () => {
     setShowCardModal(false);
-    setCardForm({ name: '', due_day: 10, closing_day: 3 });
+    setEditingCardId(null);
+    setCardForm(DEFAULT_CARD_FORM);
   };
 
   const handleCardSubmit = async (e) => {
     e.preventDefault();
-    await window.api.addCreditCard({ ...cardForm, user_id: userId, due_day: Number(cardForm.due_day), closing_day: Number(cardForm.closing_day) });
+    const payload = {
+      ...cardForm,
+      user_id: userId,
+      due_day: Number(cardForm.due_day),
+      closing_day: Number(cardForm.closing_day)
+    };
+    if (editingCardId) {
+      await window.api.updateCreditCard(editingCardId, payload);
+    } else {
+      await window.api.addCreditCard(payload);
+    }
     closeCardModal();
-    fetchData();
+    await fetchData();
+    await fetchInvoiceInfo();
+    await fetchTransactions();
+    await fetchAllCardsTotals();
+  };
+
+  const openClosingDayModal = () => {
+    const currentCard = cards.find(c => c.id === selectedCardId);
+    setCustomClosingInput(
+      invoiceInfo?.custom_closing_day != null
+        ? String(invoiceInfo.custom_closing_day)
+        : String(currentCard?.closing_day || '')
+    );
+    setClosingDayError('');
+    setShowClosingDayModal(true);
+  };
+
+  const handleSaveClosingDay = async (e) => {
+    e.preventDefault();
+    const currentCard = cards.find(c => c.id === selectedCardId);
+    const dayNum = parseInt(customClosingInput, 10);
+    if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+      setClosingDayError('Informe um dia válido entre 1 e 31.');
+      return;
+    }
+    setClosingDayError('');
+    try {
+      const isDifferent = dayNum !== Number(currentCard?.closing_day);
+      await window.api.setCreditCardInvoiceClosingDay(
+        selectedCardId,
+        globalMonth,
+        isDifferent ? dayNum : null
+      );
+      setShowClosingDayModal(false);
+      await fetchInvoiceInfo();
+      await fetchTransactions();
+      await fetchAllCardsTotals();
+    } catch (err) {
+      setClosingDayError(err.message || 'Erro ao salvar dia de corte.');
+    }
+  };
+
+  const handleResetClosingDay = async () => {
+    try {
+      await window.api.setCreditCardInvoiceClosingDay(selectedCardId, globalMonth, null);
+      setShowClosingDayModal(false);
+      await fetchInvoiceInfo();
+      await fetchTransactions();
+      await fetchAllCardsTotals();
+    } catch (err) {
+      console.error('Erro ao restaurar dia de corte fixo:', err);
+    }
   };
 
   const handleTxSubmit = async (e) => {
@@ -272,7 +377,7 @@ export default function CreditCards({ userId, globalMonth }) {
           <h2 className="text-2xl font-bold">Cartões de Crédito</h2>
           <p className="text-text-muted">Gerencie faturas, compras parceladas e conferência de lançamentos</p>
         </div>
-        <button onClick={() => setShowCardModal(true)} className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-accent/20 transition-all">
+        <button onClick={openNewCardModal} className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-accent/20 transition-all">
           <Plus size={20} /> Novo Cartão
         </button>
       </header>
@@ -404,13 +509,22 @@ export default function CreditCards({ userId, globalMonth }) {
                   </div>
                 )}
 
-                <button 
-                  onClick={(e) => { e.stopPropagation(); deleteCard(c.id); }} 
-                  className="absolute top-2 right-2 p-2 text-text-muted hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Excluir Cartão"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openEditCardModal(c); }} 
+                    className="p-1.5 text-text-muted hover:text-white transition-colors"
+                    title="Editar Cartão (Dados fixos)"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); deleteCard(c.id); }} 
+                    className="p-1.5 text-text-muted hover:text-rose-400 transition-colors"
+                    title="Excluir Cartão"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -447,14 +561,59 @@ export default function CreditCards({ userId, globalMonth }) {
                     )}
                   </div>
 
-                  <p className="text-xs text-text-muted mt-1">
-                    Vencimento: dia {currentCard?.due_day} • Fechamento: dia {currentCard?.closing_day}
-                    {reconciliationStats.totalCount > 0 && (
-                      <span className="ml-2 font-medium text-white/70">
-                        ({reconciliationStats.checkedCount} de {reconciliationStats.totalCount} itens conferidos)
-                      </span>
-                    )}
-                  </p>
+                  {(() => {
+                    const effectiveClosingDay = invoiceInfo?.effective_closing_day ?? currentCard?.closing_day;
+                    const isCustomClosingDay = !!invoiceInfo?.is_custom;
+
+                    return (
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted mt-1.5">
+                        <span>
+                          Vencimento: <strong className="text-white/90">dia {currentCard?.due_day}</strong>
+                        </span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                          Fechamento:
+                          <strong className={isCustomClosingDay ? "text-amber-300 font-bold" : "text-white/90"}>
+                            dia {effectiveClosingDay}
+                          </strong>
+                          {isCustomClosingDay ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
+                              Personalizado neste mês (fixo: dia {currentCard?.closing_day})
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-text-muted/70">(fixo)</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={openClosingDayModal}
+                            className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 px-2 py-0.5 rounded-md border border-accent/20 transition-all ml-1"
+                            title="Informar ou alterar o dia de corte da fatura deste mês"
+                          >
+                            <CalendarClock size={12} />
+                            {isCustomClosingDay ? 'Alterar corte' : 'Informar corte deste mês'}
+                          </button>
+                          {isCustomClosingDay && (
+                            <button
+                              type="button"
+                              onClick={handleResetClosingDay}
+                              className="text-[11px] text-rose-400/90 hover:text-rose-300 hover:underline transition-colors ml-0.5"
+                              title="Restaurar para o dia de corte fixo padrão do cartão"
+                            >
+                              Restaurar padrão
+                            </button>
+                          )}
+                        </span>
+                        {reconciliationStats.totalCount > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="font-medium text-white/70">
+                              ({reconciliationStats.checkedCount} de {reconciliationStats.totalCount} itens conferidos)
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Bloco de Totais */}
@@ -721,11 +880,11 @@ export default function CreditCards({ userId, globalMonth }) {
         )}
       </div>
 
-      {/* Modal Novo Cartão */}
+      {/* Modal Novo/Editar Cartão */}
       {showCardModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-panel w-full max-w-sm p-6 border border-white/10 rounded-2xl shadow-2xl">
-            <h2 className="text-xl font-bold mb-4">Novo Cartão</h2>
+            <h2 className="text-xl font-bold mb-4">{editingCardId ? 'Editar Cartão' : 'Novo Cartão'}</h2>
             <form onSubmit={handleCardSubmit} className="space-y-4">
               <input type="text" placeholder="Nome do Cartão (ex: Nubank)" required className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent" value={cardForm.name} onChange={e => setCardForm({...cardForm, name: e.target.value})} />
               <div className="flex gap-4">
@@ -734,13 +893,105 @@ export default function CreditCards({ userId, globalMonth }) {
                   <input type="number" min="1" max="31" required className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent" value={cardForm.due_day} onChange={e => setCardForm({...cardForm, due_day: e.target.value})} />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs text-text-muted mb-1 block">Dia de Fechamento</label>
+                  <label className="text-xs text-text-muted mb-1 block">Fechamento (Fixo)</label>
                   <input type="number" min="1" max="31" required className="w-full bg-black/30 border border-white/10 rounded-lg p-3 outline-none focus:border-accent" value={cardForm.closing_day} onChange={e => setCardForm({...cardForm, closing_day: e.target.value})} />
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={closeCardModal} className="px-4 py-2 text-text-muted hover:text-white transition-colors">Cancelar</button>
                 <button type="submit" className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent-hover transition-colors">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Dia de Corte Customizado da Fatura */}
+      {showClosingDayModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-md p-6 border border-white/10 rounded-2xl shadow-2xl relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent">
+                <CalendarClock size={22} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Dia de Corte da Fatura</h2>
+                <p className="text-xs text-text-muted">
+                  {currentCard?.name} &bull; Mês:{' '}
+                  {globalMonth
+                    ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(`${globalMonth}-02`))
+                    : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 text-xs text-text-muted space-y-2 mb-4">
+              <div className="flex items-center justify-between">
+                <span>Dia de corte fixo (padrão do cartão):</span>
+                <span className="font-bold text-white">dia {currentCard?.closing_day}</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-white/70">
+                Em meses com mais ou menos de 30 dias (ou finais de semana), você pode informar o dia de corte exato deste mês. Se for diferente, ele sobrescreve o fixo e ajusta as compras da fatura automaticamente.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveClosingDay} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-white/90 mb-1.5 block">
+                  Dia de corte para este mês (1 a 31):
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    className="flex-1 bg-black/40 border border-white/15 rounded-lg p-3 outline-none focus:border-accent text-white font-medium"
+                    placeholder={`Ex: ${currentCard?.closing_day || 3}`}
+                    value={customClosingInput}
+                    onChange={(e) => setCustomClosingInput(e.target.value)}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCustomClosingInput(String(currentCard?.closing_day || ''))}
+                    className="px-3 py-2 text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-text-muted hover:text-white transition-colors whitespace-nowrap"
+                    title="Preencher com o dia de corte fixo padrão"
+                  >
+                    Usar Fixo ({currentCard?.closing_day})
+                  </button>
+                </div>
+                {closingDayError && (
+                  <p className="text-xs text-rose-400 mt-1.5">{closingDayError}</p>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                {invoiceInfo?.is_custom ? (
+                  <button
+                    type="button"
+                    onClick={handleResetClosingDay}
+                    className="text-xs text-rose-400 hover:text-rose-300 hover:underline transition-colors"
+                  >
+                    Restaurar padrão fixo
+                  </button>
+                ) : <div />}
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowClosingDayModal(false)}
+                    className="px-4 py-2 text-sm text-text-muted hover:text-white transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-accent text-white px-5 py-2 rounded-lg font-medium hover:bg-accent-hover transition-colors shadow-lg shadow-accent/20"
+                  >
+                    Salvar Corte
+                  </button>
+                </div>
               </div>
             </form>
           </div>

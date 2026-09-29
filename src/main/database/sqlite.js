@@ -242,6 +242,15 @@ const initDb = () => {
       up: () => {
         db.exec(`UPDATE credit_card_transactions SET amount = ROUND(amount, 2);`);
       }
+    },
+    {
+      id: 11,
+      name: '011_add_closing_day_to_credit_card_invoices',
+      up: () => {
+        if (!hasColumn(db, 'credit_card_invoices', 'closing_day')) {
+          db.exec(`ALTER TABLE credit_card_invoices ADD COLUMN closing_day INTEGER;`);
+        }
+      }
     }
   ];
 

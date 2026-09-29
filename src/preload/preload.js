@@ -25,6 +25,9 @@ const IPC_CHANNELS = {
   CREDIT_CARD_TRANSACTIONS_DELETE: 'credit_card_transactions:delete',
   CREDIT_CARD_TRANSACTIONS_TOGGLE_CHECK: 'credit_card_transactions:toggle_check',
   CREDIT_CARD_TRANSACTIONS_CHECK_ALL: 'credit_card_transactions:check_all',
+
+  CREDIT_CARD_INVOICE_GET: 'credit_card_invoices:get',
+  CREDIT_CARD_INVOICE_SET_CLOSING_DAY: 'credit_card_invoices:set_closing_day',
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
@@ -89,6 +92,9 @@ contextBridge.exposeInMainWorld('api', {
     deleteCreditCardTransaction: (id) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_DELETE, id),
     toggleCreditCardTransactionCheck: (id, isChecked) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_TOGGLE_CHECK, { id, is_checked: isChecked }),
     checkAllCreditCardTransactions: (creditCardId, invoiceMonth, isChecked) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_TRANSACTIONS_CHECK_ALL, { creditCardId, invoiceMonth, is_checked: isChecked }),
+    
+    getCreditCardInvoice: (creditCardId, invoiceMonth) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_INVOICE_GET, { creditCardId, invoiceMonth }),
+    setCreditCardInvoiceClosingDay: (creditCardId, invoiceMonth, closingDay) => ipcRenderer.invoke(IPC_CHANNELS.CREDIT_CARD_INVOICE_SET_CLOSING_DAY, { creditCardId, invoiceMonth, closingDay }),
     
     getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate }),
     getCategoryExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSES, { userId, startDate, endDate }),

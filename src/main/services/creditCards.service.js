@@ -82,4 +82,98 @@ const calculateInvoiceReconciliation = (transactions) => {
   };
 };
 
-module.exports = { calculateInstallments, calculateInvoiceReconciliation };
+/**
+ * Retorna o dia de corte efetivo para uma fatura, priorizando o dia customizado
+ * daquele mês sobre o dia fixo do cartão se informado e válido (1 a 31).
+ *
+ * @param {number|string} cardClosingDay Dia de corte fixo/padrão do cartão
+ * @param {number|string|null|undefined} invoiceClosingDay Dia de corte customizado do mês
+ * @returns {number} Dia de corte efetivo (1 a 31)
+ */
+const getEffectiveClosingDay = (cardClosingDay, invoiceClosingDay) => {
+  const parsedInvoice = parseInt(invoiceClosingDay, 10);
+  if (!isNaN(parsedInvoice) && parsedInvoice >= 1 && parsedInvoice <= 31) {
+    return parsedInvoice;
+  }
+  const parsedCard = parseInt(cardClosingDay, 10);
+  if (!isNaN(parsedCard) && parsedCard >= 1 && parsedCard <= 31) {
+    return parsedCard;
+  }
+  return 1;
+};
+
+/**
+ * Calcula o mês da fatura (invoice_month no formato YYYY-MM) em que uma transação
+ * de cartão de crédito se encaixa, considerando o dia de corte fixo do cartão
+ * e eventuais sobrescritas de corte cadastradas para o mês específico.
+ *
+ * @param {string} txDate Data da compra no formato 'YYYY-MM-DD'
+ * @param {{ due_day: number, closing_day: number }} card Configuração do cartão
+ * @param {Object.<string, number>} [customClosingDaysMap={}] Mapa de faturas com cortes customizados { 'YYYY-MM': closing_day }
+ * @returns {string} Mês da fatura no formato 'YYYY-MM'
+ */
+const calculateTransactionInvoiceMonth = (txDate, card, customClosingDaysMap = {}) => {
+  if (!txDate || !card) return '';
+  const [year, month, day] = txDate.split('-').map(Number);
+  const dueDay = Number(card.due_day);
+  const fixedClosingDay = Number(card.closing_day);
+
+  if (dueDay > fixedClosingDay) {
+    // Caso padrão: fechamento e vencimento no mesmo mês da fatura (ex: fecha dia 3, vence dia 10)
+    // A fatura que fecha no mês da compra (year-month) é a própria fatura year-month.
+    const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
+    const effectiveClosing = getEffectiveClosingDay(fixedClosingDay, customClosingDaysMap[currentMonthKey]);
+
+    if (day < effectiveClosing) {
+      return currentMonthKey;
+    } else {
+      const nextDate = new Date(year, month - 1 + 1, 1);
+      return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
+    }
+  } else {
+    // Caso em que o fechamento ocorre no mês anterior ao vencimento (ex: fecha dia 25, vence dia 5 do mês seguinte)
+    // A fatura cujo fechamento cai neste mês de compra (year-month) é a fatura do mês seguinte (year-(month+1)).
+    const targetDate = new Date(year, month - 1 + 1, 1);
+    const targetMonthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
+    const effectiveClosing = getEffectiveClosingDay(fixedClosingDay, customClosingDaysMap[targetMonthKey]);
+
+    if (day < effectiveClosing) {
+      return targetMonthKey;
+    } else {
+      const subsequentDate = new Date(year, month - 1 + 2, 1);
+      return `${subsequentDate.getFullYear()}-${String(subsequentDate.getMonth() + 1).padStart(2, '0')}`;
+    }
+  }
+};
+
+/**
+ * Calcula os meses de fatura para cada uma das parcelas de uma compra.
+ *
+ * @param {string} txDate Data da compra no formato 'YYYY-MM-DD'
+ * @param {number|string} installmentsCount Número de parcelas
+ * @param {{ due_day: number, closing_day: number }} card Configuração do cartão
+ * @param {Object.<string, number>} [customClosingDaysMap={}] Mapa de cortes customizados
+ * @returns {string[]} Lista de invoice_month ('YYYY-MM') para cada parcela
+ */
+const calculateInstallmentInvoiceMonths = (txDate, installmentsCount, card, customClosingDaysMap = {}) => {
+  const count = Math.max(1, parseInt(installmentsCount, 10) || 1);
+  const baseInvoiceMonth = calculateTransactionInvoiceMonth(txDate, card, customClosingDaysMap);
+  if (!baseInvoiceMonth) return [];
+
+  const [baseYear, baseMonth] = baseInvoiceMonth.split('-').map(Number);
+  const months = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(baseYear, baseMonth - 1 + i, 1);
+    const m = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push(m);
+  }
+  return months;
+};
+
+module.exports = {
+  calculateInstallments,
+  calculateInvoiceReconciliation,
+  getEffectiveClosingDay,
+  calculateTransactionInvoiceMonth,
+  calculateInstallmentInvoiceMonths
+};
