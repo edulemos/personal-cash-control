@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Circle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
 import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
+import ReconciliationModal from '../components/ReconciliationModal';
 
 const getInitials = (name = '') =>
   name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -14,13 +15,33 @@ const formatCurrency = (value) => {
   }).format(isNaN(num) ? 0 : num);
 };
 
-export default function Transactions({ userId, startDate, endDate }) {
+export default function Transactions({ userId, startDate, endDate, onNavigateToSettings }) {
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [people, setPeople] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [quickFilter, setQuickFilter] = useState('all');
   
+  // Reconciliation with Gemini AI state
+  const [showReconciliationModal, setShowReconciliationModal] = useState(false);
+  const [showGeminiWarningModal, setShowGeminiWarningModal] = useState(false);
+
+  const handleOpenReconciliation = async () => {
+    try {
+      if (window.api && window.api.geminiStatus) {
+        const status = await window.api.geminiStatus();
+        if (!status?.isConfigured) {
+          setShowGeminiWarningModal(true);
+          return;
+        }
+      }
+      setShowReconciliationModal(true);
+    } catch (err) {
+      console.error('Erro ao verificar Gemini:', err);
+      setShowGeminiWarningModal(true);
+    }
+  };
+
   // Form state
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -174,6 +195,16 @@ export default function Transactions({ userId, startDate, endDate }) {
             <option value="fixed">Despesas Fixas</option>
             <option value="unpaid">Não Pagas</option>
           </select>
+
+          <button
+            type="button"
+            onClick={handleOpenReconciliation}
+            className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/40 text-accent hover:border-accent hover:bg-accent/30 px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all shadow-sm shadow-accent/10"
+            title="Ler e conciliar extrato bancário com Inteligência Artificial (Gemini)"
+          >
+            <Sparkles size={18} className="text-accent" />
+            Conciliar com IA
+          </button>
 
           <button 
               onClick={() => {
@@ -358,6 +389,64 @@ export default function Transactions({ userId, startDate, endDate }) {
                 <button type="submit" className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-lg font-medium transition-colors">{editingId ? 'Atualizar' : 'Salvar'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Conciliação com IA */}
+      <ReconciliationModal
+        isOpen={showReconciliationModal}
+        onClose={() => setShowReconciliationModal(false)}
+        onApplied={() => {
+          fetchData();
+        }}
+        documentType="bank"
+        contextData={{
+          userId: userId,
+          startDate: startDate,
+          endDate: endDate
+        }}
+        categories={categories}
+        people={people}
+      />
+
+      {/* Modal de Aviso: Gemini Não Configurado */}
+      {showGeminiWarningModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-md p-6 border border-white/10 rounded-2xl shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-amber-400">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Chave de IA Não Configurada</h3>
+                <p className="text-xs text-text-muted">Recurso do Google Gemini</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-text-muted">
+              Para ler extratos bancários e conciliar registros automaticamente com Inteligência Artificial, informe e verifique sua <strong className="text-white">API Key do Google Gemini</strong> nas Configurações.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowGeminiWarningModal(false)}
+                className="px-4 py-2 text-sm text-text-muted hover:text-white transition-colors"
+              >
+                Agora não
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGeminiWarningModal(false);
+                  if (onNavigateToSettings) onNavigateToSettings();
+                }}
+                className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5"
+              >
+                Ir para Configurações
+              </button>
+            </div>
           </div>
         </div>
       )}

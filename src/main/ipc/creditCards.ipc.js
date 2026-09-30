@@ -4,7 +4,8 @@ const { IPC_CHANNELS } = require('../../shared/ipc-channels');
 const {
   calculateInstallments,
   calculateInstallmentInvoiceMonths,
-  getEffectiveClosingDay
+  getEffectiveClosingDay,
+  getInvoiceBillingPeriod
 } = require('../services/creditCards.service');
 
 const getCustomClosingDaysMap = (db, creditCardId) => {
@@ -107,6 +108,7 @@ const setupCreditCardsHandlers = () => {
     try {
       if (!creditCardId || !invoiceMonth) return [];
       const db = getDb();
+      recalculateCardTransactions(db, creditCardId);
       try {
         const stmt = db.prepare(`
           SELECT t.*, c.name as category_name, c.color as category_color,
@@ -256,8 +258,28 @@ const setupCreditCardsHandlers = () => {
         invoice = db.prepare('SELECT credit_card_id, invoice_month, is_paid, closing_day FROM credit_card_invoices WHERE credit_card_id = ? AND invoice_month = ?').get(creditCardId, invoiceMonth);
       } catch (_) {}
 
+      const customMap = getCustomClosingDaysMap(db, creditCardId);
       const customClosingDay = (invoice && invoice.closing_day != null) ? Number(invoice.closing_day) : null;
       const effectiveClosingDay = customClosingDay != null ? customClosingDay : card.closing_day;
+      const billingPeriod = getInvoiceBillingPeriod(card, invoiceMonth, customMap);
+
+      let formattedPeriod = '';
+      let formattedDueDate = '';
+      let formattedClosingDate = '';
+      if (billingPeriod) {
+        const [sy, sm, sd] = billingPeriod.startDate.split('-');
+        const [ey, em, ed] = billingPeriod.endDate.split('-');
+        formattedPeriod = `${sd}/${sm}/${sy} até ${ed}/${em}/${ey}`;
+
+        if (billingPeriod.dueDate) {
+          const [dy, dm, dd] = billingPeriod.dueDate.split('-');
+          formattedDueDate = `${dd}/${dm}/${dy}`;
+        }
+        if (billingPeriod.closingDate) {
+          const [cy, cm, cd] = billingPeriod.closingDate.split('-');
+          formattedClosingDate = `${cd}/${cm}/${cy}`;
+        }
+      }
 
       return {
         credit_card_id: card.id,
@@ -267,7 +289,16 @@ const setupCreditCardsHandlers = () => {
         custom_closing_day: customClosingDay,
         effective_closing_day: effectiveClosingDay,
         is_custom: customClosingDay != null,
-        is_paid: !!(invoice && invoice.is_paid)
+        is_paid: !!(invoice && invoice.is_paid),
+        billing_period: billingPeriod ? {
+          startDate: billingPeriod.startDate,
+          endDate: billingPeriod.endDate,
+          closingDate: billingPeriod.closingDate,
+          dueDate: billingPeriod.dueDate,
+          formatted: formattedPeriod,
+          formattedDueDate,
+          formattedClosingDate
+        } : null
       };
     } catch (err) {
       console.error('Erro em CREDIT_CARD_INVOICE_GET:', err);

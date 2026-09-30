@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, Clock, Zap, ShieldCheck, ShieldOff, Lock } from 'lucide-react';
+import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, CheckCircle2, Clock, Zap, ShieldCheck, ShieldOff, Lock, Sparkles, Key, Eye, EyeOff, Trash2, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 
 export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
@@ -20,10 +20,19 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
   const [pinConfirm, setPinConfirm] = useState('');
   const [pinError, setPinError] = useState('');
 
+  // Estado do Gemini AI
+  const [geminiStatus, setGeminiStatus] = useState({ hasKey: false, isConfigured: false });
+  const [geminiKeyInput, setGeminiKeyInput] = useState('');
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [geminiMessage, setGeminiMessage] = useState(null);
+  const [editingGeminiKey, setEditingGeminiKey] = useState(false);
+
   useEffect(() => {
     fetchStatus();
     fetchAutoBackupConfig();
     fetchPinStatus();
+    fetchGeminiStatus();
   }, []);
 
   const fetchStatus = async () => {
@@ -53,6 +62,64 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
       setPinEnabled(status.enabled);
     } catch (err) {
       console.error('Erro ao buscar status do PIN:', err);
+    }
+  };
+
+  const fetchGeminiStatus = async () => {
+    try {
+      if (window.api && window.api.geminiStatus) {
+        const status = await window.api.geminiStatus();
+        setGeminiStatus(status);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar status do Gemini:', err);
+    }
+  };
+
+  const handleSaveGeminiKey = async () => {
+    if (!geminiKeyInput.trim()) {
+      setGeminiMessage({ type: 'error', text: 'Informe a chave de API do Gemini.' });
+      return;
+    }
+    setGeminiLoading(true);
+    setGeminiMessage(null);
+    try {
+      const res = await window.api.geminiSaveKey(geminiKeyInput.trim());
+      if (res.success) {
+        setGeminiMessage({ type: 'success', text: 'Chave do Gemini verificada e ativada com sucesso!' });
+        setGeminiKeyInput('');
+        setEditingGeminiKey(false);
+        fetchGeminiStatus();
+      } else {
+        setGeminiMessage({ type: 'error', text: res.error || 'Chave inválida ou não autorizada pela API Google.' });
+      }
+    } catch (err) {
+      setGeminiMessage({ type: 'error', text: 'Erro ao validar chave: ' + (err.message || 'Falha de conexão.') });
+    } finally {
+      setGeminiLoading(false);
+    }
+  };
+
+  const handleRemoveGeminiKey = async () => {
+    if (!confirm('Deseja realmente remover a chave da API do Gemini? O recurso de leitura e conciliação de faturas/extratos por IA será desabilitado.')) {
+      return;
+    }
+    setGeminiLoading(true);
+    setGeminiMessage(null);
+    try {
+      const res = await window.api.geminiRemoveKey();
+      if (res.success) {
+        setGeminiMessage({ type: 'success', text: 'Chave removida. As funções de IA foram desabilitadas.' });
+        setGeminiKeyInput('');
+        setEditingGeminiKey(false);
+        fetchGeminiStatus();
+      } else {
+        setGeminiMessage({ type: 'error', text: res.error || 'Erro ao remover chave.' });
+      }
+    } catch (err) {
+      setGeminiMessage({ type: 'error', text: 'Erro ao remover chave: ' + err.message });
+    } finally {
+      setGeminiLoading(false);
     }
   };
 
@@ -327,6 +394,148 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
               Esqueceu o PIN? Use o botão <strong className="text-white">"Esqueci meu PIN"</strong> na tela de bloqueio para recuperar acesso via login Google.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Seção de Inteligência Artificial (Google Gemini) */}
+      <div className="glass-panel p-8 max-w-3xl">
+        <div className="flex items-start gap-4 mb-6">
+          <div className={clsx(
+            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+            geminiStatus.isConfigured ? "bg-amber-500/20 text-amber-400" : "bg-white/10 text-text-muted"
+          )}>
+            <Sparkles size={24} />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-semibold">Inteligência Artificial (Google Gemini)</h3>
+              {geminiStatus.isConfigured ? (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Ativo e Verificado
+                </span>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-text-muted border border-white/10">
+                  Não configurado
+                </span>
+              )}
+            </div>
+            <p className="text-text-muted mt-1 text-sm">
+              Permite a leitura inteligente e conciliação automática de faturas de cartão de crédito e extratos bancários (PDF, OFX, CSV e imagens).
+            </p>
+          </div>
+        </div>
+
+        {geminiMessage && (
+          <div className={clsx(
+            "p-4 rounded-xl mb-5 text-sm flex items-center gap-2 border",
+            geminiMessage.type === 'success'
+              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              : "bg-rose-500/10 border-rose-500/20 text-rose-400"
+          )}>
+            {geminiMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+            <p>{geminiMessage.text}</p>
+          </div>
+        )}
+
+        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+          {geminiStatus.isConfigured && !editingGeminiKey ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm text-emerald-400 flex items-center gap-2">
+                    <CheckCircle2 size={16} /> API Key configurada e protegida
+                  </p>
+                  <p className="text-xs text-text-muted mt-1">
+                    Sua chave está criptografada com segurança em repouso no aplicativo. A conciliação por IA está totalmente habilitada.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingGeminiKey(true);
+                      setGeminiMessage(null);
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
+                    Alterar Chave
+                  </button>
+                  <button
+                    onClick={handleRemoveGeminiKey}
+                    disabled={geminiLoading}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/20 transition-colors inline-flex items-center gap-1.5"
+                  >
+                    <Trash2 size={14} /> Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs text-text-muted mb-1.5 block font-medium">
+                  {geminiStatus.isConfigured ? 'Nova Chave da API (Google Gemini)' : 'Chave da API do Google Gemini'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showGeminiKey ? 'text' : 'password'}
+                    placeholder="AIzaSy..."
+                    value={geminiKeyInput}
+                    onChange={(e) => {
+                      setGeminiKeyInput(e.target.value);
+                      setGeminiMessage(null);
+                    }}
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 pr-12 outline-none focus:border-accent text-white font-mono text-sm placeholder:text-white/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGeminiKey(!showGeminiKey)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-white p-1"
+                    title={showGeminiKey ? "Ocultar chave" : "Mostrar chave"}
+                  >
+                    {showGeminiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <div className="text-xs text-text-muted flex items-center gap-1">
+                  <span>Não tem uma chave?</span>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-accent hover:underline inline-flex items-center gap-0.5 font-medium"
+                  >
+                    Obter chave gratuita no Google AI Studio <ExternalLink size={11} />
+                  </a>
+                </div>
+
+                <div className="flex gap-2">
+                  {editingGeminiKey && (
+                    <button
+                      onClick={() => {
+                        setEditingGeminiKey(false);
+                        setGeminiKeyInput('');
+                        setGeminiMessage(null);
+                      }}
+                      disabled={geminiLoading}
+                      className="px-4 py-2 text-sm text-text-muted hover:text-white transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                  <button
+                    onClick={handleSaveGeminiKey}
+                    disabled={geminiLoading || !geminiKeyInput.trim()}
+                    className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors inline-flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {geminiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Verificar e Salvar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

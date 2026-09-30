@@ -63,6 +63,14 @@ const IPC_CHANNELS = {
   PIN_SET: 'pin:set',
   PIN_VERIFY: 'pin:verify',
   PIN_REMOVE: 'pin:remove',
+
+  GEMINI_STATUS: 'gemini:status',
+  GEMINI_SAVE_KEY: 'gemini:save_key',
+  GEMINI_REMOVE_KEY: 'gemini:remove_key',
+
+  RECONCILIATION_SELECT_FILE: 'reconciliation:select_file',
+  RECONCILIATION_PROCESS: 'reconciliation:process',
+  RECONCILIATION_APPLY: 'reconciliation:apply',
 };
 
 module.exports = { IPC_CHANNELS };

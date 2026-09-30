@@ -65,6 +65,7 @@ const { setupPeopleHandlers } = require('./ipc/people.ipc');
 const { setupPinHandlers } = require('./ipc/pin.ipc');
 const { setupBanksHandlers } = require('./ipc/banks.ipc');
 const { setupDepositsHandlers } = require('./ipc/deposits.ipc');
+const setupGeminiHandlers = require('./ipc/gemini.ipc');
 const autoBackupService = require('./services/auto-backup.service');
 
 app.whenReady().then(() => {
@@ -79,6 +80,7 @@ app.whenReady().then(() => {
   setupPinHandlers();
   setupBanksHandlers();
   setupDepositsHandlers();
+  setupGeminiHandlers();
 
   // Inicia o serviço de backup automático
   autoBackupService.start();

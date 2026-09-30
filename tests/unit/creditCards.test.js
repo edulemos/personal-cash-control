@@ -3,6 +3,7 @@ import {
   calculateInvoiceReconciliation,
   calculateInstallments,
   getEffectiveClosingDay,
+  getInvoiceBillingPeriod,
   calculateTransactionInvoiceMonth,
   calculateInstallmentInvoiceMonths
 } from '../../src/main/services/creditCards.service';
@@ -210,5 +211,43 @@ describe('Credit Cards Service - Transaction Invoice Month Calculation', () => {
     // Compra em 15/11 em 3x (após corte dia 3 -> 1ª parcela em 2026-12)
     const months = calculateInstallmentInvoiceMonths('2026-11-15', 3, standardCard);
     expect(months).toEqual(['2026-12', '2027-01', '2027-02']);
+  });
+
+  it('should calculate correct billing period and assign purchases in Market Standard (due month)', () => {
+    const latamCard = { due_day: 6, closing_day: 1 };
+    // Fatura de outubro/2026 vence em 06/10 e tem corte antecipado para dia 29/09:
+    const customMap = { '2026-10': 29 };
+
+    // Fatura de setembro/2026 (vence em 06/09/2026):
+    // Ciclo de compras: de 01/08/2026 até 31/08/2026 (fechamento em 01/09/2026)
+    const periodSep = getInvoiceBillingPeriod(latamCard, '2026-09', customMap);
+    expect(periodSep).toEqual({
+      startDate: '2026-08-01',
+      endDate: '2026-08-31',
+      closingDate: '2026-09-01',
+      dueDate: '2026-09-06'
+    });
+
+    // Fatura de outubro/2026 (vence em 06/10/2026 com corte no dia 29):
+    // Ciclo de compras: de 01/09/2026 até 28/09/2026 (fechamento em 29/09/2026)
+    const periodOct = getInvoiceBillingPeriod(latamCard, '2026-10', customMap);
+    expect(periodOct).toEqual({
+      startDate: '2026-09-01',
+      endDate: '2026-09-28',
+      closingDate: '2026-09-29',
+      dueDate: '2026-10-06'
+    });
+
+    // Compras de agosto/2026 (fecham em 01/09) DEVEM vencer na fatura de setembro/2026 (2026-09)
+    expect(calculateTransactionInvoiceMonth('2026-08-25', latamCard, customMap)).toBe('2026-09');
+    expect(calculateTransactionInvoiceMonth('2026-08-31', latamCard, customMap)).toBe('2026-09');
+
+    // Compras de setembro/2026 (fecham em 29/09) DEVEM vencer na fatura de outubro/2026 (2026-10)
+    expect(calculateTransactionInvoiceMonth('2026-09-01', latamCard, customMap)).toBe('2026-10');
+    expect(calculateTransactionInvoiceMonth('2026-09-15', latamCard, customMap)).toBe('2026-10');
+    expect(calculateTransactionInvoiceMonth('2026-09-28', latamCard, customMap)).toBe('2026-10');
+
+    // Compras a partir do corte de 29/09 já caem na fatura que vence em novembro/2026 (2026-11)
+    expect(calculateTransactionInvoiceMonth('2026-09-29', latamCard, customMap)).toBe('2026-11');
   });
 });

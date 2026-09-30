@@ -64,6 +64,14 @@ const IPC_CHANNELS = {
   PIN_SET: 'pin:set',
   PIN_VERIFY: 'pin:verify',
   PIN_REMOVE: 'pin:remove',
+
+  GEMINI_STATUS: 'gemini:status',
+  GEMINI_SAVE_KEY: 'gemini:save_key',
+  GEMINI_REMOVE_KEY: 'gemini:remove_key',
+
+  RECONCILIATION_SELECT_FILE: 'reconciliation:select_file',
+  RECONCILIATION_PROCESS: 'reconciliation:process',
+  RECONCILIATION_APPLY: 'reconciliation:apply',
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -133,6 +141,14 @@ contextBridge.exposeInMainWorld('api', {
     setAutoBackupInterval: (interval) => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS_AUTO_BACKUP_SET, interval),
 
     getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
+
+    // Gemini AI e Conciliação Financeira
+    geminiStatus: () => ipcRenderer.invoke(IPC_CHANNELS.GEMINI_STATUS),
+    geminiSaveKey: (apiKey) => ipcRenderer.invoke(IPC_CHANNELS.GEMINI_SAVE_KEY, apiKey),
+    geminiRemoveKey: () => ipcRenderer.invoke(IPC_CHANNELS.GEMINI_REMOVE_KEY),
+    reconciliationSelectFile: () => ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_SELECT_FILE),
+    reconciliationProcess: (params) => ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_PROCESS, params),
+    reconciliationApply: (params) => ipcRenderer.invoke(IPC_CHANNELS.RECONCILIATION_APPLY, params),
 
     onUpdateAvailable: (callback) => ipcRenderer.on('updater:available', (_, info) => callback(info)),
     onUpdateDownloaded: (callback) => ipcRenderer.on('updater:downloaded', (_, info) => callback(info)),

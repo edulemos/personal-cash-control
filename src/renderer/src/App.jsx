@@ -224,9 +224,9 @@ function App() {
         </div>
         <div className="flex-1 overflow-auto p-8 pt-16">
           {currentView === 'dashboard' && <Dashboard userId={user.id} startDate={startDate} endDate={endDate} />}
-          {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} />}
+          {currentView === 'transactions' && <Transactions userId={user.id} startDate={startDate} endDate={endDate} onNavigateToSettings={() => setCurrentView('settings')} />}
           {currentView === 'receivables' && <Receivables userId={user.id} startDate={startDate} endDate={endDate} />}
-          {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} />}
+          {currentView === 'credit_cards' && <CreditCards userId={user.id} globalMonth={globalMonth} onNavigateToSettings={() => setCurrentView('settings')} />}
           {currentView === 'categories' && <Categories userId={user.id} />}
           {currentView === 'people' && <People userId={user.id} />}
           {currentView === 'settings' && <Settings updateStatus={updateStatus} setUpdateStatus={setUpdateStatus} appVersion={appVersion} user={user} setUser={setUser} />}

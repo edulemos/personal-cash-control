@@ -9,10 +9,13 @@ import {
   ShieldCheck,
   RotateCcw,
   CalendarClock,
-  Pencil
+  Pencil,
+  Sparkles,
+  AlertCircle
 } from 'lucide-react';
 import clsx from 'clsx';
 import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
+import ReconciliationModal from '../components/ReconciliationModal';
 
 const getInitials = (name = '') =>
   name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -22,7 +25,7 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(num) ? 0 : num);
 };
 
-export default function CreditCards({ userId, globalMonth }) {
+export default function CreditCards({ userId, globalMonth, onNavigateToSettings }) {
   const [cards, setCards] = useState([]);
   const [selectedCardId, setSelectedCardId] = useState(null);
   const [allCardsTotals, setAllCardsTotals] = useState({});
@@ -45,6 +48,26 @@ export default function CreditCards({ userId, globalMonth }) {
   const [showClosingDayModal, setShowClosingDayModal] = useState(false);
   const [customClosingInput, setCustomClosingInput] = useState('');
   const [closingDayError, setClosingDayError] = useState('');
+
+  // Reconciliation with Gemini AI state
+  const [showReconciliationModal, setShowReconciliationModal] = useState(false);
+  const [showGeminiWarningModal, setShowGeminiWarningModal] = useState(false);
+
+  const handleOpenReconciliation = async () => {
+    try {
+      if (window.api && window.api.geminiStatus) {
+        const status = await window.api.geminiStatus();
+        if (!status?.isConfigured) {
+          setShowGeminiWarningModal(true);
+          return;
+        }
+      }
+      setShowReconciliationModal(true);
+    } catch (err) {
+      console.error('Erro ao checar status do Gemini:', err);
+      setShowGeminiWarningModal(true);
+    }
+  };
 
   const DEFAULT_CARD_FORM = { name: '', due_day: 10, closing_day: 3 };
   const [cardForm, setCardForm] = useState(DEFAULT_CARD_FORM);
@@ -564,52 +587,67 @@ export default function CreditCards({ userId, globalMonth }) {
                   {(() => {
                     const effectiveClosingDay = invoiceInfo?.effective_closing_day ?? currentCard?.closing_day;
                     const isCustomClosingDay = !!invoiceInfo?.is_custom;
+                    const billingPeriodFormatted = invoiceInfo?.billing_period?.formatted;
+                    const formattedDueDate = invoiceInfo?.billing_period?.formattedDueDate || `dia ${currentCard?.due_day}`;
+                    const formattedClosingDate = invoiceInfo?.billing_period?.formattedClosingDate || `dia ${effectiveClosingDay}`;
 
                     return (
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted mt-1.5">
-                        <span>
-                          Vencimento: <strong className="text-white/90">dia {currentCard?.due_day}</strong>
-                        </span>
-                        <span>•</span>
-                        <span className="inline-flex items-center gap-1.5 flex-wrap">
-                          Fechamento:
-                          <strong className={isCustomClosingDay ? "text-amber-300 font-bold" : "text-white/90"}>
-                            dia {effectiveClosingDay}
-                          </strong>
-                          {isCustomClosingDay ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
-                              Personalizado neste mês (fixo: dia {currentCard?.closing_day})
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-text-muted/70">(fixo)</span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={openClosingDayModal}
-                            className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 px-2 py-0.5 rounded-md border border-accent/20 transition-all ml-1"
-                            title="Informar ou alterar o dia de corte da fatura deste mês"
-                          >
-                            <CalendarClock size={12} />
-                            {isCustomClosingDay ? 'Alterar corte' : 'Informar corte deste mês'}
-                          </button>
-                          {isCustomClosingDay && (
+                      <div className="flex flex-col gap-1.5 mt-1.5">
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                          <span>
+                            Vencimento da Fatura: <strong className="text-white font-semibold">{formattedDueDate}</strong>
+                          </span>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1.5 flex-wrap">
+                            Fechamento:
+                            <strong className={isCustomClosingDay ? "text-amber-300 font-bold" : "text-white font-semibold"}>
+                              {formattedClosingDate}
+                            </strong>
+                            {isCustomClosingDay ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
+                                Personalizado (fixo: dia {currentCard?.closing_day})
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-text-muted/70">(padrão)</span>
+                            )}
                             <button
                               type="button"
-                              onClick={handleResetClosingDay}
-                              className="text-[11px] text-rose-400/90 hover:text-rose-300 hover:underline transition-colors ml-0.5"
-                              title="Restaurar para o dia de corte fixo padrão do cartão"
+                              onClick={openClosingDayModal}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 px-2 py-0.5 rounded-md border border-accent/20 transition-all ml-1"
+                              title="Informar ou alterar o dia de corte da fatura deste mês"
                             >
-                              Restaurar padrão
+                              <CalendarClock size={12} />
+                              {isCustomClosingDay ? 'Alterar corte' : 'Informar corte'}
                             </button>
+                            {isCustomClosingDay && (
+                              <button
+                                type="button"
+                                onClick={handleResetClosingDay}
+                                className="text-[11px] text-rose-400/90 hover:text-rose-300 hover:underline transition-colors ml-0.5"
+                                title="Restaurar para o dia de corte fixo padrão do cartão"
+                              >
+                                Restaurar padrão
+                              </button>
+                            )}
+                          </span>
+                          {reconciliationStats.totalCount > 0 && (
+                            <>
+                              <span>•</span>
+                              <span className="font-medium text-white/70">
+                                ({reconciliationStats.checkedCount} de {reconciliationStats.totalCount} itens conferidos)
+                              </span>
+                            </>
                           )}
-                        </span>
-                        {reconciliationStats.totalCount > 0 && (
-                          <>
-                            <span>•</span>
-                            <span className="font-medium text-white/70">
-                              ({reconciliationStats.checkedCount} de {reconciliationStats.totalCount} itens conferidos)
+                        </div>
+
+                        {billingPeriodFormatted && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <span className="text-text-muted">Compras do ciclo:</span>
+                            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-md text-[11.5px] shadow-sm">
+                              <CalendarClock size={12} className="text-emerald-400" />
+                              {billingPeriodFormatted}
                             </span>
-                          </>
+                          </div>
                         )}
                       </div>
                     );
@@ -734,6 +772,17 @@ export default function CreditCards({ userId, globalMonth }) {
                   </div>
                 )}
 
+                {/* Botão Conciliação com IA */}
+                <button
+                  type="button"
+                  onClick={handleOpenReconciliation}
+                  className="bg-gradient-to-r from-accent/20 to-purple-500/20 border border-accent/40 text-accent hover:border-accent hover:bg-accent/30 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm shadow-accent/10"
+                  title="Conferir e conciliar fatura com IA (Gemini)"
+                >
+                  <Sparkles size={14} className="text-accent" />
+                  Conferir com IA
+                </button>
+
                 <button 
                   onClick={() => {
                     setEditingTxId(null);
@@ -812,6 +861,11 @@ export default function CreditCards({ userId, globalMonth }) {
                               <span className={clsx(isChecked && "text-white/90")}>
                                 {t.description}
                               </span>
+                              {Number(t.amount) < 0 && (
+                                <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                  Estorno / Reembolso
+                                </span>
+                              )}
                               {isChecked && (
                                 <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                                   Conferido
@@ -850,7 +904,11 @@ export default function CreditCards({ userId, globalMonth }) {
                           </td>
 
                           <td className="p-4 text-right font-medium whitespace-nowrap">
-                            <span className={clsx(isChecked ? "text-rose-300/80" : "text-rose-300 font-semibold")}>
+                            <span className={clsx(
+                              Number(t.amount) < 0
+                                ? "text-emerald-400 font-semibold"
+                                : isChecked ? "text-rose-300/80" : "text-rose-300 font-semibold"
+                            )}>
                               {formatCurrency(t.amount)}
                             </span>
                           </td>
@@ -930,6 +988,12 @@ export default function CreditCards({ userId, globalMonth }) {
                 <span>Dia de corte fixo (padrão do cartão):</span>
                 <span className="font-bold text-white">dia {currentCard?.closing_day}</span>
               </div>
+              {invoiceInfo?.billing_period?.formatted && (
+                <div className="flex items-center justify-between pt-1 border-t border-white/5">
+                  <span>Período de cobrança desta fatura:</span>
+                  <span className="font-semibold text-emerald-400">{invoiceInfo.billing_period.formatted}</span>
+                </div>
+              )}
               <p className="text-[11px] leading-relaxed text-white/70">
                 Em meses com mais ou menos de 30 dias (ou finais de semana), você pode informar o dia de corte exato deste mês. Se for diferente, ele sobrescreve o fixo e ajusta as compras da fatura automaticamente.
               </p>
@@ -1044,6 +1108,66 @@ export default function CreditCards({ userId, globalMonth }) {
                 <button type="submit" className="bg-accent text-white px-4 py-2 rounded-lg font-medium hover:bg-accent-hover transition-colors">{editingTxId ? 'Salvar' : 'Lançar'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Conciliação com IA */}
+      <ReconciliationModal
+        isOpen={showReconciliationModal}
+        onClose={() => setShowReconciliationModal(false)}
+        onApplied={() => {
+          fetchTransactions();
+          fetchAllCardsTotals();
+        }}
+        documentType="credit_card"
+        contextData={{
+          creditCardId: selectedCardId,
+          cardName: currentCard?.name,
+          invoiceMonth: globalMonth,
+          userId: userId
+        }}
+        categories={categories.filter(c => c.type === 'expense')}
+        people={people}
+      />
+
+      {/* Modal de Aviso: Gemini Não Configurado */}
+      {showGeminiWarningModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-md p-6 border border-white/10 rounded-2xl shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-amber-400">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Chave de IA Não Configurada</h3>
+                <p className="text-xs text-text-muted">Recurso do Google Gemini</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-text-muted">
+              Para ler faturas de cartão de crédito e conciliar registros automaticamente com Inteligência Artificial, informe e verifique sua <strong className="text-white">API Key do Google Gemini</strong> nas Configurações.
+            </p>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowGeminiWarningModal(false)}
+                className="px-4 py-2 text-sm text-text-muted hover:text-white transition-colors"
+              >
+                Agora não
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGeminiWarningModal(false);
+                  if (onNavigateToSettings) onNavigateToSettings();
+                }}
+                className="bg-accent hover:bg-accent-hover text-white px-5 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5"
+              >
+                Ir para Configurações
+              </button>
+            </div>
           </div>
         </div>
       )}

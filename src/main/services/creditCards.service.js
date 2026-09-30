@@ -103,9 +103,89 @@ const getEffectiveClosingDay = (cardClosingDay, invoiceClosingDay) => {
 };
 
 /**
+ * Retorna o período de cobrança (startDate e endDate no formato YYYY-MM-DD)
+ * de uma fatura específica (invoiceMonth no formato YYYY-MM) para um cartão.
+ *
+ * Exemplo: fatura de setembro/2026 com corte no dia 29 e corte anterior dia 1:
+ * startDate: '2026-09-01'
+ * endDate: '2026-09-28' (véspera do corte atual 29/09)
+ *
+ * @param {{ due_day: number, closing_day: number }} card Configuração do cartão
+ * @param {string} invoiceMonth Mês da fatura no formato 'YYYY-MM'
+ * @param {Object.<string, number>} [customClosingDaysMap={}] Mapa de faturas com cortes customizados
+ * @returns {{ startDate: string, endDate: string, closingDate: string } | null}
+ */
+/**
+ * Retorna o objeto Date da data de fechamento da fatura invoiceMonth ('YYYY-MM')
+ */
+const getInvoiceClosingDate = (card, invoiceMonth, customClosingDaysMap = {}) => {
+  const [year, month] = invoiceMonth.split('-').map(Number);
+  const dueDay = Number(card.due_day) || 10;
+  const fixedClosingDay = Number(card.closing_day) || 1;
+  const effectiveClosingDay = getEffectiveClosingDay(fixedClosingDay, customClosingDaysMap[invoiceMonth]);
+
+  let closingYear = year;
+  let closingMonth = month;
+
+  // No Padrão de Mercado, o fechamento é SEMPRE anterior ao vencimento da fatura.
+  // Se o dia de corte for maior ou igual ao dia de vencimento (ex: vence dia 1 ou 5 e fecha dia 25;
+  // ou vence dia 6 e tem corte no dia 29 do mês anterior), o fechamento ocorre no mês anterior ao vencimento.
+  if (effectiveClosingDay >= dueDay) {
+    const prev = new Date(year, month - 1 - 1, 1);
+    closingYear = prev.getFullYear();
+    closingMonth = prev.getMonth() + 1;
+  }
+
+  const maxDays = new Date(closingYear, closingMonth, 0).getDate();
+  const safeDay = Math.min(effectiveClosingDay, maxDays);
+  return new Date(closingYear, closingMonth - 1, safeDay);
+};
+
+/**
+ * Retorna o período de cobrança (startDate e endDate no formato YYYY-MM-DD)
+ * de uma fatura específica (invoiceMonth no formato YYYY-MM) para um cartão.
+ *
+ * @param {{ due_day: number, closing_day: number }} card Configuração do cartão
+ * @param {string} invoiceMonth Mês de vencimento da fatura no formato 'YYYY-MM'
+ * @param {Object.<string, number>} [customClosingDaysMap={}] Mapa de faturas com cortes customizados
+ * @returns {{ startDate: string, endDate: string, closingDate: string, dueDate: string } | null}
+ */
+const getInvoiceBillingPeriod = (card, invoiceMonth, customClosingDaysMap = {}) => {
+  if (!card || !invoiceMonth) return null;
+  const [year, month] = invoiceMonth.split('-').map(Number);
+  const dueDay = Number(card.due_day) || 10;
+
+  // Data de corte da fatura atual
+  const currentClosingObj = getInvoiceClosingDate(card, invoiceMonth, customClosingDaysMap);
+
+  // endDate é a véspera da data de corte
+  const endObj = new Date(currentClosingObj);
+  endObj.setDate(endObj.getDate() - 1);
+  const endDate = `${endObj.getFullYear()}-${String(endObj.getMonth() + 1).padStart(2, '0')}-${String(endObj.getDate()).padStart(2, '0')}`;
+
+  // Data de corte da fatura anterior
+  const prevDate = new Date(year, month - 1 - 1, 1);
+  const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+  const startObj = getInvoiceClosingDate(card, prevMonthKey, customClosingDaysMap);
+
+  const startDate = `${startObj.getFullYear()}-${String(startObj.getMonth() + 1).padStart(2, '0')}-${String(startObj.getDate()).padStart(2, '0')}`;
+  const closingDate = `${currentClosingObj.getFullYear()}-${String(currentClosingObj.getMonth() + 1).padStart(2, '0')}-${String(currentClosingObj.getDate()).padStart(2, '0')}`;
+
+  const maxDueDays = new Date(year, month, 0).getDate();
+  const safeDueDay = Math.min(dueDay, maxDueDays);
+  const dueDate = `${year}-${String(month).padStart(2, '0')}-${String(safeDueDay).padStart(2, '0')}`;
+
+  return {
+    startDate,
+    endDate,
+    closingDate,
+    dueDate
+  };
+};
+
+/**
  * Calcula o mês da fatura (invoice_month no formato YYYY-MM) em que uma transação
- * de cartão de crédito se encaixa, considerando o dia de corte fixo do cartão
- * e eventuais sobrescritas de corte cadastradas para o mês específico.
+ * de cartão de crédito se encaixa, considerando o período de cobrança das faturas.
  *
  * @param {string} txDate Data da compra no formato 'YYYY-MM-DD'
  * @param {{ due_day: number, closing_day: number }} card Configuração do cartão
@@ -115,12 +195,27 @@ const getEffectiveClosingDay = (cardClosingDay, invoiceClosingDay) => {
 const calculateTransactionInvoiceMonth = (txDate, card, customClosingDaysMap = {}) => {
   if (!txDate || !card) return '';
   const [year, month, day] = txDate.split('-').map(Number);
+
+  // Janela de meses candidatos ao redor da compra (mês anterior, atual, próximo, etc)
+  const candidateMonths = [];
+  for (let offset = -2; offset <= 2; offset++) {
+    const d = new Date(year, month - 1 + offset, 1);
+    candidateMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  // Verifica em qual período de cobrança a compra se encaixa
+  for (const invMonth of candidateMonths) {
+    const period = getInvoiceBillingPeriod(card, invMonth, customClosingDaysMap);
+    if (period && txDate >= period.startDate && txDate <= period.endDate) {
+      return invMonth;
+    }
+  }
+
+  // Fallback padrão se não encontrar nos períodos da janela
   const dueDay = Number(card.due_day);
   const fixedClosingDay = Number(card.closing_day);
 
   if (dueDay > fixedClosingDay) {
-    // Caso padrão: fechamento e vencimento no mesmo mês da fatura (ex: fecha dia 3, vence dia 10)
-    // A fatura que fecha no mês da compra (year-month) é a própria fatura year-month.
     const currentMonthKey = `${year}-${String(month).padStart(2, '0')}`;
     const effectiveClosing = getEffectiveClosingDay(fixedClosingDay, customClosingDaysMap[currentMonthKey]);
 
@@ -131,8 +226,6 @@ const calculateTransactionInvoiceMonth = (txDate, card, customClosingDaysMap = {
       return `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
     }
   } else {
-    // Caso em que o fechamento ocorre no mês anterior ao vencimento (ex: fecha dia 25, vence dia 5 do mês seguinte)
-    // A fatura cujo fechamento cai neste mês de compra (year-month) é a fatura do mês seguinte (year-(month+1)).
     const targetDate = new Date(year, month - 1 + 1, 1);
     const targetMonthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`;
     const effectiveClosing = getEffectiveClosingDay(fixedClosingDay, customClosingDaysMap[targetMonthKey]);
@@ -174,6 +267,7 @@ module.exports = {
   calculateInstallments,
   calculateInvoiceReconciliation,
   getEffectiveClosingDay,
+  getInvoiceBillingPeriod,
   calculateTransactionInvoiceMonth,
   calculateInstallmentInvoiceMonths
 };
