@@ -3,7 +3,7 @@ import { Cloud, Download, Upload, LogOut, Loader2, AlertTriangle, RefreshCw, Che
 import clsx from 'clsx';
 
 export default function Settings({ updateStatus, setUpdateStatus, appVersion, user, setUser }) {
-  const [gdriveStatus, setGdriveStatus] = useState({ isAuthenticated: false, email: null, lastBackup: null });
+  const [gdriveStatus, setGdriveStatus] = useState({ isAuthenticated: false, hasDriveScope: false, email: null, lastBackup: null });
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -229,7 +229,34 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
     setActionLoading(false);
   };
 
+  const handleConnectDrive = async () => {
+    setActionLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await window.api.gdriveLogin();
+      if (res.success) {
+        if (res.hasDriveScope) {
+          setSuccess('Acesso ao Google Drive autorizado com sucesso!');
+        } else {
+          setError('Atenção: A permissão para gerenciar arquivos no Google Drive não foi marcada na tela do Google. Tente novamente clicando em "Autorizar Google Drive" e certifique-se de marcar a caixa de seleção de arquivos.');
+        }
+        await fetchStatus();
+      } else {
+        setError(res.error || 'Erro ao conectar ao Google Drive.');
+      }
+    } catch (err) {
+      setError('Erro ao conectar ao Google Drive: ' + (err.message || 'Falha na comunicação.'));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleBackup = async () => {
+    if (!gdriveStatus.hasDriveScope) {
+      setError('Permissão do Google Drive não autorizada. Clique em "Autorizar Google Drive" abaixo e marque a caixa de permissão na tela do Google.');
+      return;
+    }
     setActionLoading(true);
     setError(null);
     setSuccess(null);
@@ -242,13 +269,17 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
         setError(result.error);
       }
     } catch (err) {
-      setError('Erro ao realizar backup.');
+      setError('Erro ao realizar backup: ' + (err.message || 'Erro inesperado'));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRestore = async () => {
+    if (!gdriveStatus.hasDriveScope) {
+      setError('Permissão do Google Drive não autorizada. Clique em "Autorizar Google Drive" abaixo e marque a caixa de permissão na tela do Google.');
+      return;
+    }
     if (!confirm('ATENÇÃO: Restaurar o backup vai sobrescrever todos os dados atuais do seu aplicativo pelas informações que estão no Google Drive. Esta ação não pode ser desfeita. Tem certeza?')) {
       return;
     }
@@ -541,17 +572,63 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
 
       {/* Seção de Backup Google Drive */}
       <div className="glass-panel p-8 max-w-3xl">
-        <div className="flex items-start gap-4 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-            <Cloud size={24} />
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+              <Cloud size={24} />
+            </div>
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-semibold">Backup no Google Drive</h3>
+                {gdriveStatus.hasDriveScope ? (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Drive Conectado</span>
+                ) : gdriveStatus.isAuthenticated ? (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/20">Permissão Pendente</span>
+                ) : (
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-text-muted border border-white/10">Desconectado</span>
+                )}
+              </div>
+              <p className="text-text-muted mt-1 text-sm">
+                Mantenha seus dados financeiros seguros salvando uma cópia na sua conta Google Drive.
+              </p>
+            </div>
           </div>
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold">Backup no Google Drive</h3>
-            <p className="text-text-muted mt-1 text-sm">
-              Mantenha seus dados financeiros seguros salvando uma cópia na sua conta Google Drive.
-            </p>
-          </div>
+          {gdriveStatus.hasDriveScope && (
+            <button
+              onClick={handleConnectDrive}
+              disabled={actionLoading}
+              title="Renovar permissões ou reconectar ao Google Drive"
+              className="text-xs text-text-muted hover:text-white px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 transition-colors inline-flex items-center gap-1.5 shrink-0"
+            >
+              <RefreshCw size={12} className={actionLoading ? 'animate-spin' : ''} />
+              Reconectar Drive
+            </button>
+          )}
         </div>
+
+        {/* Alerta explicativo quando a permissão do Drive não foi concedida */}
+        {!gdriveStatus.hasDriveScope && (
+          <div className="bg-amber-500/10 border border-amber-500/25 text-amber-300 p-5 rounded-xl mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-sm">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={22} className="shrink-0 text-amber-400 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-200">Permissão de acesso ao Google Drive pendente</p>
+                <p className="text-xs text-amber-300/80 mt-1 leading-relaxed">
+                  Sua conta Google está conectada, mas a permissão para gerenciar arquivos no Google Drive não foi autorizada.<br />
+                  Clique no botão para autorizar e <strong>certifique-se de marcar a caixa de seleção de acesso aos arquivos</strong> na tela do Google.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleConnectDrive}
+              disabled={actionLoading}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-4 py-2.5 rounded-lg text-xs transition-colors shrink-0 flex items-center gap-2 shadow-sm"
+            >
+              {actionLoading ? <Loader2 size={15} className="animate-spin" /> : <Cloud size={15} />}
+              Autorizar Google Drive
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl mb-6 flex gap-3 text-sm">

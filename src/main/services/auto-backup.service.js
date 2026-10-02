@@ -80,8 +80,8 @@ class AutoBackupService {
 
       if (!intervalMs) return; // 'off' — não faz nada
 
-      if (!gdriveService.isAuthenticated()) {
-        console.log('[AutoBackup] Usuário não autenticado no Google Drive. Pulando backup.');
+      if (!gdriveService.isAuthenticated() || !gdriveService.hasDriveScope()) {
+        console.log('[AutoBackup] Google Drive não conectado ou sem permissão de acesso. Pulando backup.');
         return;
       }
 

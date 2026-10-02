@@ -121,11 +121,16 @@ export default function Login({ onLoginSuccess }) {
           )}
         </button>
 
-        {/* Nota de privacidade */}
-        <p className="text-text-muted text-xs text-center leading-relaxed">
-          Seus dados ficam armazenados <strong className="text-white/60">localmente</strong> neste dispositivo.
-          O Google é usado apenas para autenticação e backup.
-        </p>
+        {/* Nota de privacidade e permissões */}
+        <div className="space-y-1.5 text-center">
+          <p className="text-text-muted text-xs leading-relaxed">
+            Seus dados ficam armazenados <strong className="text-white/60">localmente</strong> neste dispositivo.
+            O Google é usado apenas para autenticação e backup.
+          </p>
+          <p className="text-amber-400/80 text-[11px] leading-relaxed">
+            💡 Ao autenticar, marque a caixa de permissão do Google Drive para habilitar os backups na nuvem.
+          </p>
+        </div>
       </div>
     </div>
   );

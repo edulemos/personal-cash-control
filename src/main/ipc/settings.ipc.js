@@ -9,12 +9,14 @@ function setupSettingsHandlers() {
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_STATUS, async () => {
     try {
       const isAuth = gdriveService.isAuthenticated();
+      const hasDriveScope = gdriveService.hasDriveScope();
       let email = null;
       if (isAuth) {
         email = await gdriveService.getUserInfo();
       }
       return {
         isAuthenticated: isAuth,
+        hasDriveScope,
         email,
         lastBackup: gdriveService.getLastBackupDate()
       };
@@ -22,6 +24,7 @@ function setupSettingsHandlers() {
       console.error('Erro ao obter status do GDrive:', err);
       return {
         isAuthenticated: false,
+        hasDriveScope: false,
         email: null,
         lastBackup: null
       };
@@ -30,8 +33,12 @@ function setupSettingsHandlers() {
 
   ipcMain.handle(IPC_CHANNELS.SETTINGS_GDRIVE_LOGIN, async () => {
     try {
-      const email = await gdriveService.login();
-      return { success: true, email };
+      const result = await gdriveService.login();
+      return { 
+        success: true, 
+        email: result.email,
+        hasDriveScope: result.hasDriveScope 
+      };
     } catch (err) {
       console.error('Erro no login GDrive:', err);
       return { success: false, error: err.message };
