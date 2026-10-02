@@ -29,6 +29,7 @@ const IPC_CHANNELS = {
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
+  DASHBOARD_CATEGORY_EXPENSE_DETAILS: 'dashboard:category-expense-details',
   DASHBOARD_PEOPLE_EXPENSES: 'dashboard:people-expenses',
 
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',

@@ -31,6 +31,7 @@ const IPC_CHANNELS = {
   
   DASHBOARD_STATS: 'dashboard:stats',
   DASHBOARD_CATEGORY_EXPENSES: 'dashboard:category-expenses',
+  DASHBOARD_CATEGORY_EXPENSE_DETAILS: 'dashboard:category-expense-details',
   DASHBOARD_PEOPLE_EXPENSES: 'dashboard:people-expenses',
   
   SETTINGS_GDRIVE_STATUS: 'settings:gdrive:status',
@@ -106,6 +107,7 @@ contextBridge.exposeInMainWorld('api', {
     
     getDashboardStats: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_STATS, { userId, startDate, endDate }),
     getCategoryExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSES, { userId, startDate, endDate }),
+    getCategoryExpenseDetails: (userId, startDate, endDate, categoryName) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSE_DETAILS, { userId, startDate, endDate, categoryName }),
     getPeopleExpenses: (userId, startDate, endDate) => ipcRenderer.invoke(IPC_CHANNELS.DASHBOARD_PEOPLE_EXPENSES, { userId, startDate, endDate }),
 
     getPeople: (userId) => ipcRenderer.invoke(IPC_CHANNELS.PEOPLE_GET, userId),

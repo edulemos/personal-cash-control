@@ -308,6 +308,77 @@ const setupTransactionsHandlers = () => {
     }
   });
 
+  // Detalha os lançamentos de uma categoria no período (conta + cartões).
+  ipcMain.handle(IPC_CHANNELS.DASHBOARD_CATEGORY_EXPENSE_DETAILS, (event, { userId, startDate, endDate, categoryName }) => {
+    try {
+      const parsedUserId = Number(userId);
+      const normalizedCategory = typeof categoryName === 'string' ? categoryName.trim() : '';
+      const isIsoDate = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+      if (!Number.isInteger(parsedUserId) || parsedUserId <= 0 || !isIsoDate(startDate) || !isIsoDate(endDate) || !normalizedCategory || normalizedCategory.length > 100) {
+        return [];
+      }
+
+      const db = getDb();
+      const normalStmt = db.prepare(`
+        SELECT t.id, t.description, t.amount, t.date, t.is_paid,
+               COALESCE(c.name, 'Geral') as category_name,
+               c.color as category_color,
+               p.name as person_name,
+               'account' as source_type,
+               NULL as source_name,
+               NULL as installment_number,
+               NULL as installments
+        FROM transactions t
+        LEFT JOIN categories c ON t.category_id = c.id
+        LEFT JOIN people p ON t.person_id = p.id
+        WHERE t.user_id = ?
+          AND t.type = 'expense'
+          AND t.date >= ? AND t.date <= ?
+          AND COALESCE(c.name, 'Geral') = ?
+      `);
+      const details = normalStmt.all(parsedUserId, startDate, endDate, normalizedCategory) || [];
+
+      const invoiceMonths = [];
+      let [year, month] = startDate.split('-').map(Number);
+      const [endYear, endMonth] = endDate.split('-').map(Number);
+      while (year < endYear || (year === endYear && month <= endMonth)) {
+        invoiceMonths.push(`${year}-${String(month).padStart(2, '0')}`);
+        month += 1;
+        if (month > 12) { month = 1; year += 1; }
+      }
+
+      if (invoiceMonths.length > 0) {
+        const cardStmt = db.prepare(`
+          SELECT t.id, t.description, t.amount, t.date,
+                 IFNULL(i.is_paid, 0) as is_paid,
+                 COALESCE(c.name, 'Geral') as category_name,
+                 c.color as category_color,
+                 p.name as person_name,
+                 'credit_card' as source_type,
+                 cc.name as source_name,
+                 t.installment_number,
+                 t.installments
+          FROM credit_card_transactions t
+          JOIN credit_cards cc ON t.credit_card_id = cc.id
+          LEFT JOIN credit_card_invoices i
+            ON i.credit_card_id = cc.id AND i.invoice_month = t.invoice_month
+          LEFT JOIN categories c ON t.category_id = c.id
+          LEFT JOIN people p ON t.person_id = p.id
+          WHERE cc.user_id = ?
+            AND t.invoice_month IN (${invoiceMonths.map(() => '?').join(',')})
+            AND COALESCE(c.name, 'Geral') = ?
+        `);
+        details.push(...cardStmt.all(parsedUserId, ...invoiceMonths, normalizedCategory));
+      }
+
+      return details.sort((a, b) => String(b.date).localeCompare(String(a.date)) || Number(b.id) - Number(a.id));
+    } catch (err) {
+      console.error('Erro em DASHBOARD_CATEGORY_EXPENSE_DETAILS:', err);
+      return [];
+    }
+  });
+
   // Gastos por pessoa (transações gerais + cartões)
   ipcMain.handle(IPC_CHANNELS.DASHBOARD_PEOPLE_EXPENSES, (event, { userId, startDate, endDate }) => {
     try {

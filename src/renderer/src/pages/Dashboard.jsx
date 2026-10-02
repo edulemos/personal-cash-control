@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock, TrendingUp, TrendingDown, Users, CheckCircle2 } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Wallet, Clock, TrendingUp, TrendingDown, Users, CheckCircle2, X, ReceiptText, CreditCard, Loader2 } from 'lucide-react';
 import ExpensesByCategoryChart from '../components/ExpensesByCategoryChart';
 
 const formatCurrency = (value) => {
@@ -25,6 +25,9 @@ export default function Dashboard({ userId, startDate, endDate }) {
   const [categoryData, setCategoryData] = useState([]);
   const [peopleData, setPeopleData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryDetails, setCategoryDetails] = useState([]);
+  const [categoryDetailsLoading, setCategoryDetailsLoading] = useState(false);
 
   const fetchStats = async () => {
     try {
@@ -58,8 +61,34 @@ export default function Dashboard({ userId, startDate, endDate }) {
   };
 
   useEffect(() => {
+    setSelectedCategory(null);
     fetchStats();
   }, [userId, startDate, endDate]);
+
+  useEffect(() => {
+    if (!selectedCategory) return undefined;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setSelectedCategory(null);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectedCategory]);
+
+  const openCategoryDetails = async (category) => {
+    if (!category?.name || !userId || !startDate || !endDate) return;
+    setSelectedCategory(category);
+    setCategoryDetails([]);
+    setCategoryDetailsLoading(true);
+    try {
+      const details = await window.api.getCategoryExpenseDetails(userId, startDate, endDate, category.name);
+      setCategoryDetails(Array.isArray(details) ? details : []);
+    } catch (error) {
+      console.error('Erro ao carregar detalhes da categoria:', error);
+      setCategoryDetails([]);
+    } finally {
+      setCategoryDetailsLoading(false);
+    }
+  };
 
   if (loading) {
     return <div className="text-text-muted">Carregando dados...</div>;
@@ -156,7 +185,7 @@ export default function Dashboard({ userId, startDate, endDate }) {
       <section className="space-y-4">
       {/* Gráfico de Despesas por Categoria */}
       <div className="glass-panel p-5 shadow-none">
-        <ExpensesByCategoryChart categoryData={categoryData} />
+        <ExpensesByCategoryChart categoryData={categoryData} onCategorySelect={openCategoryDetails} />
       </div>
 
       {/* Widget Gastos por Pessoa */}
@@ -198,6 +227,93 @@ export default function Dashboard({ userId, startDate, endDate }) {
         </div>
       )}
       </section>
+
+      {selectedCategory && (
+        <div
+          className="fixed inset-0 z-50 bg-black/65 backdrop-blur-sm flex items-center justify-center p-4"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setSelectedCategory(null);
+          }}
+        >
+          <div className="glass-panel w-full max-w-4xl max-h-[82vh] overflow-hidden flex flex-col shadow-2xl border border-white/10">
+            <div className="px-5 py-4 border-b border-white/10 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${selectedCategory.color || '#94a3b8'}22`, color: selectedCategory.color || '#94a3b8' }}
+                >
+                  <ReceiptText size={20} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs text-text-muted">Lançamentos da categoria</p>
+                  <h3 className="text-lg font-bold truncate">{selectedCategory.name}</h3>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {categoryDetails.length} {categoryDetails.length === 1 ? 'lançamento' : 'lançamentos'} · {formatCurrency(selectedCategory.value)}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedCategory(null)}
+                className="w-9 h-9 rounded-lg text-text-muted hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+                aria-label="Fechar detalhes da categoria"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-auto min-h-[180px]">
+              {categoryDetailsLoading ? (
+                <div className="h-48 flex flex-col items-center justify-center text-text-muted gap-3">
+                  <Loader2 size={24} className="animate-spin text-accent" />
+                  <p className="text-sm">Carregando lançamentos...</p>
+                </div>
+              ) : categoryDetails.length === 0 ? (
+                <div className="h-48 flex items-center justify-center text-sm text-text-muted">
+                  Nenhum lançamento encontrado nesta categoria.
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="sticky top-0 bg-[#182337] z-10">
+                    <tr className="text-[11px] uppercase tracking-wider text-text-muted border-b border-white/10">
+                      <th className="px-5 py-3 font-medium">Data</th>
+                      <th className="px-4 py-3 font-medium">Descrição</th>
+                      <th className="px-4 py-3 font-medium">Origem</th>
+                      <th className="px-4 py-3 font-medium">Pessoa</th>
+                      <th className="px-5 py-3 font-medium text-right">Valor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryDetails.map((item) => (
+                      <tr key={`${item.source_type}-${item.id}`} className="border-b border-white/5 hover:bg-white/[0.025]">
+                        <td className="px-5 py-3 text-xs text-text-muted whitespace-nowrap">
+                          {String(item.date || '').split('-').reverse().join('/')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-medium text-white">{item.description}</p>
+                          {Number(item.installments) > 1 && (
+                            <p className="text-[11px] text-text-muted mt-0.5">Parcela {item.installment_number}/{item.installments}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+                            {item.source_type === 'credit_card' ? <CreditCard size={13} /> : <Wallet size={13} />}
+                            {item.source_type === 'credit_card' ? item.source_name : 'Conta'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-text-muted">{item.person_name || '—'}</td>
+                        <td className={`px-5 py-3 text-right font-semibold whitespace-nowrap ${Number(item.amount) < 0 ? 'text-emerald-400' : 'text-rose-300'}`}>
+                          {formatCurrency(item.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

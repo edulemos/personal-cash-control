@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 // categoryData: array de { name, value, color } já agregado pelo backend
-export default function ExpensesByCategoryChart({ categoryData }) {
+export default function ExpensesByCategoryChart({ categoryData, onCategorySelect }) {
   // Garante cores para entradas sem cor cadastrada
   const data = useMemo(() => {
     if (!Array.isArray(categoryData) || categoryData.length === 0) return [];
@@ -52,7 +52,7 @@ export default function ExpensesByCategoryChart({ categoryData }) {
       <div>
         <p className="text-xs font-semibold tracking-wide text-rose-400 uppercase mb-1">Análise de gastos</p>
         <h3 className="text-base font-semibold">Despesas por categoria</h3>
-        <p className="text-text-muted text-xs mt-1">Distribuição dos gastos no período, incluindo subcategorias do cartão.</p>
+        <p className="text-text-muted text-xs mt-1">Distribuição dos gastos no período, incluindo subcategorias do cartão. Clique em uma categoria para ver os lançamentos.</p>
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-6">
@@ -69,6 +69,8 @@ export default function ExpensesByCategoryChart({ categoryData }) {
                 paddingAngle={3}
                 dataKey="value"
                 stroke="none"
+                cursor={onCategorySelect ? 'pointer' : 'default'}
+                onClick={(entry) => onCategorySelect?.(entry)}
               >
                 {data.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -91,14 +93,20 @@ export default function ExpensesByCategoryChart({ categoryData }) {
           {data.map((entry) => {
             const pct = total > 0 ? (entry.value / total) * 100 : 0;
             return (
-              <div key={entry.name} className="flex flex-col gap-1">
+              <button
+                type="button"
+                key={entry.name}
+                onClick={() => onCategorySelect?.(entry)}
+                className="flex flex-col gap-1 text-left rounded-lg p-1.5 -m-1.5 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/60 transition-colors group"
+                title={`Ver lançamentos de ${entry.name}`}
+              >
                 <div className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2 min-w-0">
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ background: entry.color }}
                     />
-                    <span className="truncate text-white font-medium">{entry.name}</span>
+                    <span className="truncate text-white font-medium group-hover:text-accent transition-colors">{entry.name}</span>
                   </div>
                   <span className="text-text-muted flex-shrink-0 ml-2">
                     {pct.toFixed(1)}%
@@ -112,7 +120,7 @@ export default function ExpensesByCategoryChart({ categoryData }) {
                   />
                 </div>
                 <span className="text-xs text-text-muted">{formatCurrency(entry.value)}</span>
-              </div>
+              </button>
             );
           })}
         </div>
