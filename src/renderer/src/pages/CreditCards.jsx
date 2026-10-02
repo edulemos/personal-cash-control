@@ -11,7 +11,9 @@ import {
   CalendarClock,
   Pencil,
   Sparkles,
-  AlertCircle
+  Search,
+  WalletCards,
+  CalendarDays
 } from 'lucide-react';
 import clsx from 'clsx';
 import DescriptionAutocomplete from '../components/DescriptionAutocomplete';
@@ -393,102 +395,56 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
   const cardCount = Object.values(allCardsTotals).filter((c) => c.total > 0).length;
   const currentCard = cards.find(c => c.id === selectedCardId);
 
+  const formattedMonth = globalMonth
+    ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date(`${globalMonth}-02`))
+    : 'mês selecionado';
+
   return (
-    <div className="flex flex-col h-full gap-6">
-      <header className="flex justify-between items-end">
+    <div className="flex flex-col h-full gap-5 min-h-0">
+      <header className="flex flex-wrap justify-between items-end gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Cartões de Crédito</h2>
-          <p className="text-text-muted">Gerencie faturas, compras parceladas e conferência de lançamentos</p>
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-accent uppercase mb-1">
+            <WalletCards size={14} /> Visão de cartões
+          </div>
+          <h2 className="text-2xl font-bold">Cartões de crédito</h2>
+          <p className="text-sm text-text-muted mt-1">Acompanhe faturas e confira os lançamentos de {formattedMonth}.</p>
         </div>
-        <button onClick={openNewCardModal} className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 shadow-lg shadow-accent/20 transition-all">
-          <Plus size={20} /> Novo Cartão
+        <button onClick={openNewCardModal} className="bg-accent hover:bg-accent-hover text-white px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 shadow-lg shadow-accent/20 transition-all">
+          <Plus size={18} /> Novo cartão
         </button>
       </header>
 
-      {/* Totalizador geral de faturas */}
       {cards.length > 0 && (
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.06) 100%)',
-            border: '1px solid rgba(239,68,68,0.2)',
-            borderRadius: '16px',
-            padding: '20px 28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backdropFilter: 'blur(8px)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: 'rgba(239,68,68,0.15)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <CardIcon size={22} style={{ color: '#f87171' }} />
-            </div>
-            <div>
-              <div style={{ fontSize: '13px', color: 'var(--color-text-muted, #94a3b8)', marginBottom: '2px' }}>
-                Total de Faturas &mdash;{' '}
-                {globalMonth
-                  ? new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(
-                      new Date(`${globalMonth}-02`)
-                    )
-                  : ''}
-              </div>
-              <div style={{ fontSize: '12px', color: 'rgba(248,113,113,0.7)' }}>
-                {cardCount} {cardCount === 1 ? 'cartão com gasto' : 'cartões com gastos'} neste mês
-              </div>
-            </div>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="glass-panel rounded-2xl px-5 py-4 border border-white/8 shadow-none">
+            <p className="text-xs text-text-muted">Total das faturas</p>
+            <p className="text-2xl font-bold text-white tracking-tight mt-1">{formatCurrency(grandTotal)}</p>
+            <p className="text-xs text-text-muted mt-1">{cardCount} {cardCount === 1 ? 'cartão com compra' : 'cartões com compras'}</p>
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <div
-              style={{
-                fontSize: '32px',
-                fontWeight: '800',
-                color: '#f87171',
-                letterSpacing: '-0.5px',
-                lineHeight: 1,
-              }}
-            >
-              {formatCurrency(grandTotal)}
-            </div>
-            {Object.values(allCardsTotals).length > 1 && (
-              <div style={{ marginTop: '8px', display: 'flex', gap: '8px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                {Object.values(allCardsTotals).map((c) => (
-                  c.total > 0 && (
-                    <span
-                      key={c.id}
-                      style={{
-                        fontSize: '11px',
-                        background: 'rgba(239,68,68,0.1)',
-                        border: '1px solid rgba(239,68,68,0.15)',
-                        borderRadius: '20px',
-                        padding: '2px 10px',
-                        color: '#fca5a5',
-                      }}
-                    >
-                      {c.name}: {formatCurrency(c.total)}
-                      {c.isFullyChecked && ' ✓'}
-                    </span>
-                  )
-                ))}
-              </div>
-            )}
+          <div className="glass-panel rounded-2xl px-5 py-4 border border-white/8 shadow-none">
+            <p className="text-xs text-text-muted">Fatura selecionada</p>
+            <p className="text-2xl font-bold text-rose-300 tracking-tight mt-1">{formatCurrency(reconciliationStats.totalAmount)}</p>
+            <p className="text-xs text-text-muted mt-1 truncate">{currentCard?.name || 'Selecione um cartão'}</p>
           </div>
-        </div>
+          <div className="glass-panel rounded-2xl px-5 py-4 border border-white/8 shadow-none">
+            <p className="text-xs text-text-muted">A conferir</p>
+            <p className="text-2xl font-bold text-amber-300 tracking-tight mt-1">{reconciliationStats.pendingCount} <span className="text-base font-medium">lançamentos</span></p>
+            <p className="text-xs text-text-muted mt-1">{formatCurrency(reconciliationStats.pendingAmount)} pendentes</p>
+          </div>
+        </section>
       )}
 
-      <div className="flex gap-6 flex-1 overflow-hidden">
-        {/* Lista de Cartões (Sidebar esquerdo) */}
-        <div className="w-64 flex flex-col gap-2 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] gap-5 flex-1 overflow-hidden min-h-0">
+        {/* Lista de Cartões */}
+        <aside className="glass-panel rounded-2xl border border-white/8 shadow-none flex flex-col overflow-hidden min-h-0">
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-white/5">
+            <div>
+              <h3 className="font-semibold text-sm">Seus cartões</h3>
+              <p className="text-xs text-text-muted mt-0.5">{cards.length} {cards.length === 1 ? 'cartão cadastrado' : 'cartões cadastrados'}</p>
+            </div>
+            <CardIcon size={18} className="text-text-muted" />
+          </div>
+          <div className="p-2 flex flex-col gap-1.5 overflow-y-auto">
           {cards.map(c => {
             const cardStats = allCardsTotals[c.id];
             const isSelected = selectedCardId === c.id;
@@ -497,17 +453,17 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
                 key={c.id} 
                 onClick={() => setSelectedCardId(c.id)}
                 className={clsx(
-                  "p-4 rounded-xl cursor-pointer transition-all border group relative",
-                  isSelected ? "bg-accent/10 border-accent/40 shadow-sm" : "glass-panel border-white/5 hover:bg-white/5"
+                  "p-3.5 rounded-xl cursor-pointer transition-all border group relative",
+                  isSelected ? "bg-accent/10 border-accent/35 shadow-sm" : "bg-white/[0.02] border-transparent hover:bg-white/[0.05] hover:border-white/8"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <CardIcon className={isSelected ? "text-accent" : "text-text-muted"} size={20} />
-                  <div className="flex-1 font-medium truncate">{c.name}</div>
+                  <div className="flex-1 font-medium text-sm truncate">{c.name}</div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-text-muted mt-2">
-                  <span>Vence dia {c.due_day} • Fecha {c.closing_day}</span>
+                <div className="flex items-center gap-1.5 text-xs text-text-muted mt-2">
+                  <CalendarDays size={12} /> Vence dia {c.due_day} <span className="text-white/20">·</span> fecha dia {c.closing_day}
                 </div>
 
                 {/* Badge de status da conferência na lista de cartões */}
@@ -551,18 +507,25 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
               </div>
             );
           })}
-          {cards.length === 0 && <p className="text-sm text-text-muted text-center p-4">Nenhum cartão cadastrado</p>}
-        </div>
+          {cards.length === 0 && <p className="text-sm text-text-muted text-center p-6">Nenhum cartão cadastrado</p>}
+          </div>
+        </aside>
 
         {/* Fatura do Cartão Selecionado */}
         {selectedCardId ? (
           <div className="flex-1 glass-panel overflow-hidden flex flex-col border border-white/10 rounded-2xl shadow-xl">
-            {/* Header da Fatura com Resumo de Conferência */}
-            <div className="p-6 border-b border-white/5 bg-black/20 flex flex-col gap-4">
-              <div className="flex justify-between items-start">
-                <div>
+            {/* Resumo da fatura selecionada */}
+            <div className="px-5 py-4 border-b border-white/5 bg-gradient-to-r from-white/[0.035] to-transparent">
+              <div className="flex flex-wrap justify-between items-start gap-5">
+                <div className="min-w-0">
                   <div className="flex items-center gap-3">
-                    <h3 className="text-xl font-bold text-white">{currentCard?.name || 'Fatura'}</h3>
+                    <div className="w-9 h-9 rounded-xl bg-accent/10 text-accent border border-accent/20 flex items-center justify-center shrink-0">
+                      <CardIcon size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-text-muted">Fatura de {formattedMonth}</p>
+                      <h3 className="text-lg font-bold text-white truncate">{currentCard?.name || 'Fatura'}</h3>
+                    </div>
                     
                     {/* Badge de status geral da fatura */}
                     {reconciliationStats.totalCount === 0 ? (
@@ -592,62 +555,23 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
                     const formattedClosingDate = invoiceInfo?.billing_period?.formattedClosingDate || `dia ${effectiveClosingDay}`;
 
                     return (
-                      <div className="flex flex-col gap-1.5 mt-1.5">
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                          <span>
-                            Vencimento da Fatura: <strong className="text-white font-semibold">{formattedDueDate}</strong>
-                          </span>
-                          <span>•</span>
-                          <span className="inline-flex items-center gap-1.5 flex-wrap">
-                            Fechamento:
-                            <strong className={isCustomClosingDay ? "text-amber-300 font-bold" : "text-white font-semibold"}>
-                              {formattedClosingDate}
-                            </strong>
-                            {isCustomClosingDay ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded-full border border-amber-500/30">
-                                Personalizado (fixo: dia {currentCard?.closing_day})
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-text-muted/70">(padrão)</span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={openClosingDayModal}
-                              className="inline-flex items-center gap-1 text-[11px] font-medium text-accent hover:text-accent-hover bg-accent/10 hover:bg-accent/20 px-2 py-0.5 rounded-md border border-accent/20 transition-all ml-1"
-                              title="Informar ou alterar o dia de corte da fatura deste mês"
-                            >
-                              <CalendarClock size={12} />
-                              {isCustomClosingDay ? 'Alterar corte' : 'Informar corte'}
-                            </button>
-                            {isCustomClosingDay && (
-                              <button
-                                type="button"
-                                onClick={handleResetClosingDay}
-                                className="text-[11px] text-rose-400/90 hover:text-rose-300 hover:underline transition-colors ml-0.5"
-                                title="Restaurar para o dia de corte fixo padrão do cartão"
-                              >
-                                Restaurar padrão
-                              </button>
-                            )}
-                          </span>
-                          {reconciliationStats.totalCount > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="font-medium text-white/70">
-                                ({reconciliationStats.checkedCount} de {reconciliationStats.totalCount} itens conferidos)
-                              </span>
-                            </>
-                          )}
-                        </div>
-
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-xs text-text-muted">
+                        <span>Vence <strong className="text-white font-semibold">{formattedDueDate}</strong></span>
+                        <span className="inline-flex items-center gap-1.5">
+                          Fecha <strong className={isCustomClosingDay ? "text-amber-300 font-bold" : "text-white font-semibold"}>{formattedClosingDate}</strong>
+                          <button type="button" onClick={openClosingDayModal} className="text-accent hover:text-accent-hover transition-colors" title="Alterar o dia de corte desta fatura">
+                            <Pencil size={12} />
+                          </button>
+                        </span>
                         {billingPeriodFormatted && (
-                          <div className="flex items-center gap-2 text-xs">
-                            <span className="text-text-muted">Compras do ciclo:</span>
-                            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 rounded-md text-[11.5px] shadow-sm">
-                              <CalendarClock size={12} className="text-emerald-400" />
-                              {billingPeriodFormatted}
-                            </span>
-                          </div>
+                          <span className="inline-flex items-center gap-1.5 text-emerald-300">
+                            <CalendarClock size={12} /> {billingPeriodFormatted}
+                          </span>
+                        )}
+                        {isCustomClosingDay && (
+                          <button type="button" onClick={handleResetClosingDay} className="text-amber-300 hover:text-amber-200 underline underline-offset-2">
+                            Corte personalizado · restaurar padrão
+                          </button>
                         )}
                       </div>
                     );
@@ -655,13 +579,13 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
                 </div>
 
                 {/* Bloco de Totais */}
-                <div className="text-right">
-                  <div className="text-xs text-text-muted mb-0.5">Total da Fatura</div>
-                  <div className="text-3xl font-bold text-rose-400 tracking-tight">
+                <div className="text-right shrink-0">
+                  <div className="text-xs text-text-muted mb-0.5">Total da fatura</div>
+                  <div className="text-2xl font-bold text-rose-300 tracking-tight">
                     {formatCurrency(reconciliationStats.totalAmount)}
                   </div>
                   {reconciliationStats.totalCount > 0 && (
-                    <div className="flex items-center justify-end gap-3 mt-1.5 text-xs">
+                    <div className="flex flex-col items-end gap-0.5 mt-1.5 text-xs">
                       <span className="text-emerald-400 flex items-center gap-1" title="Valor já conferido com a fatura emitida">
                         <CheckCircle2 size={12} /> Conferido: <strong>{formatCurrency(reconciliationStats.checkedAmount)}</strong>
                       </span>
@@ -675,9 +599,9 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
                 </div>
               </div>
 
-              {/* Barra de Progresso da Conferência */}
+              {/* Progresso da conferência */}
               {reconciliationStats.totalCount > 0 && (
-                <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden border border-white/5 relative">
+                <div className="w-full bg-black/40 h-1.5 rounded-full overflow-hidden border border-white/5 relative">
                   <div 
                     className={clsx(
                       "h-full transition-all duration-500 rounded-full",
@@ -691,10 +615,14 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
               )}
             </div>
             
-            {/* Barra de Ferramentas / Filtros */}
-            <div className="p-4 border-b border-white/5 flex flex-wrap justify-between items-center gap-3 bg-black/10">
-              {/* Filtros de visualização por status de conferência */}
-              <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/10">
+            {/* Lançamentos e ferramentas */}
+            <div className="px-5 py-3.5 border-b border-white/5 flex flex-wrap justify-between items-center gap-3 bg-black/10">
+              <div className="flex items-center gap-3">
+                <div className="hidden xl:block">
+                  <p className="text-sm font-semibold">Lançamentos</p>
+                  <p className="text-[11px] text-text-muted">{transactions.length} no ciclo atual</p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-white/10">
                 <button
                   type="button"
                   onClick={() => setReconciliationFilter('all')}
@@ -731,18 +659,19 @@ export default function CreditCards({ userId, globalMonth, onNavigateToSettings 
                 >
                   <CheckCircle2 size={11} /> Conferidos ({reconciliationStats.checkedCount})
                 </button>
+                </div>
               </div>
 
               {/* Pesquisa e Ações Rápidas */}
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
                   <input 
                     type="text" 
                     placeholder="Pesquisar compra..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white outline-none focus:border-accent w-44 transition-colors"
+                    className="bg-black/20 border border-white/10 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white outline-none focus:border-accent w-40 transition-colors"
                   />
                 </div>
 

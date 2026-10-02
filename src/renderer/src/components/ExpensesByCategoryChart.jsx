@@ -48,23 +48,24 @@ export default function ExpensesByCategoryChart({ categoryData }) {
   }
 
   return (
-    <div className="flex flex-col gap-6 h-full">
+    <div className="flex flex-col gap-4">
       <div>
-        <h3 className="text-lg font-semibold">Despesas por Categoria</h3>
-        <p className="text-text-muted text-sm">Distribuição dos gastos no período (inclui sub-categorias do cartão)</p>
+        <p className="text-xs font-semibold tracking-wide text-rose-400 uppercase mb-1">Análise de gastos</p>
+        <h3 className="text-base font-semibold">Despesas por categoria</h3>
+        <p className="text-text-muted text-xs mt-1">Distribuição dos gastos no período, incluindo subcategorias do cartão.</p>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-6 flex-1 min-h-0">
+      <div className="flex flex-col md:flex-row items-center gap-6">
         {/* Gráfico de pizza */}
-        <div className="relative flex-shrink-0 w-[180px] h-[180px] md:w-[220px] md:h-[220px]">
+        <div className="relative flex-shrink-0 w-[170px] h-[170px] md:w-[200px] md:h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={55}
-                outerRadius={84}
+                innerRadius={50}
+                outerRadius={76}
                 paddingAngle={3}
                 dataKey="value"
                 stroke="none"
@@ -86,7 +87,7 @@ export default function ExpensesByCategoryChart({ categoryData }) {
         </div>
 
         {/* Lista de categorias */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3 w-full overflow-auto max-h-[240px] pr-1">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3 w-full">
           {data.map((entry) => {
             const pct = total > 0 ? (entry.value / total) * 100 : 0;
             return (

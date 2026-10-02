@@ -66,124 +66,138 @@ export default function Dashboard({ userId, startDate, endDate }) {
   }
 
   const totalPeople = peopleData.reduce((acc, p) => acc + p.total, 0);
+  const projectedIsPositive = stats.netBalance >= 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <header>
-        <h2 className="text-2xl font-bold">Resumo do Mês</h2>
-        <p className="text-text-muted">Visão geral das suas finanças</p>
+        <p className="text-xs font-semibold tracking-wide text-accent uppercase mb-1">Visão financeira</p>
+        <h2 className="text-2xl font-bold">Resumo do mês</h2>
+        <p className="text-sm text-text-muted mt-1">Acompanhe o que entrou, o que saiu e o saldo projetado.</p>
       </header>
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {/* Card Saldo em Caixa */}
-        <div className="glass-panel p-4 flex flex-col gap-3">
+        <div className="glass-panel col-span-2 p-5 flex flex-col gap-3 shadow-none border border-white/8 bg-gradient-to-br from-accent/10 to-transparent">
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium text-sm">Saldo em Caixa</h3>
-            <Wallet className="text-accent flex-shrink-0" size={20} />
+            <div>
+              <h3 className="text-text-muted font-medium text-sm">Saldo disponível</h3>
+              <p className="text-xs text-text-muted mt-1">Recebimentos realizados menos despesas pagas</p>
+            </div>
+            <span className="w-10 h-10 rounded-xl bg-accent/15 text-accent flex items-center justify-center"><Wallet size={20} /></span>
           </div>
-          <p className="text-xl font-bold truncate">{formatCurrency(stats?.balance)}</p>
-          <p className="text-xs text-text-muted -mt-1">Realizados − Desp. pagas</p>
+          <p className="text-3xl font-bold tracking-tight truncate">{formatCurrency(stats?.balance)}</p>
         </div>
 
         {/* Card Saldo Previsto */}
-        <div className={`glass-panel p-4 flex flex-col gap-3 border col-span-2 lg:col-span-1 ${
-          stats?.netBalance >= 0
+        <div className={`glass-panel col-span-2 p-5 flex flex-col gap-3 border shadow-none ${
+          projectedIsPositive
             ? 'border-emerald-500/30 bg-emerald-500/5'
             : 'border-rose-500/30 bg-rose-500/5'
         }`}>
           <div className="flex items-center justify-between">
-            <h3 className="text-text-muted font-medium text-sm">Saldo Previsto</h3>
-            {stats?.netBalance >= 0
-              ? <TrendingUp className="text-emerald-400 flex-shrink-0" size={20} />
-              : <TrendingDown className="text-rose-400 flex-shrink-0" size={20} />
+            <div>
+              <h3 className="text-text-muted font-medium text-sm">Saldo previsto</h3>
+              <p className="text-xs text-text-muted mt-1">Inclui tudo o que ainda entra e sai neste mês</p>
+            </div>
+            {projectedIsPositive
+              ? <span className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center"><TrendingUp size={20} /></span>
+              : <span className="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center"><TrendingDown size={20} /></span>
             }
           </div>
-          <p className={`text-xl font-bold truncate ${
-            stats?.netBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'
+          <p className={`text-3xl font-bold tracking-tight truncate ${
+            projectedIsPositive ? 'text-emerald-400' : 'text-rose-400'
           }`}>
             {formatCurrency(stats?.netBalance)}
           </p>
-          <p className="text-xs text-text-muted -mt-1">Todos receb. − tudo a pagar</p>
         </div>
 
         {/* Card Recebimentos Realizados */}
-        <div className="glass-panel p-4 flex flex-col gap-3">
+        <div className="glass-panel p-4 flex flex-col gap-2 rounded-2xl shadow-none border border-white/8">
           <div className="flex items-center justify-between">
             <h3 className="text-text-muted font-medium text-sm">Receb. Realizados</h3>
             <CheckCircle2 className="text-emerald-400 flex-shrink-0" size={20} />
           </div>
           <p className="text-xl font-bold truncate text-emerald-400">{formatCurrency(stats?.depositRealized)}</p>
+          <p className="text-[11px] text-text-muted">já realizado</p>
         </div>
 
         {/* Card Recebimentos Previstos */}
-        <div className="glass-panel p-4 flex flex-col gap-3">
+        <div className="glass-panel p-4 flex flex-col gap-2 rounded-2xl shadow-none border border-white/8">
           <div className="flex items-center justify-between">
             <h3 className="text-text-muted font-medium text-sm">Receb. Previstos</h3>
             <ArrowUpCircle className="text-amber-400 flex-shrink-0" size={20} />
           </div>
           <p className="text-xl font-bold truncate text-amber-400">{formatCurrency(stats?.depositPending)}</p>
+          <p className="text-[11px] text-text-muted">previsto no período</p>
         </div>
 
         {/* Card Despesas Pagas */}
-        <div className="glass-panel p-4 flex flex-col gap-3">
+        <div className="glass-panel p-4 flex flex-col gap-2 rounded-2xl shadow-none border border-white/8">
           <div className="flex items-center justify-between">
             <h3 className="text-text-muted font-medium text-sm">Desp. Pagas</h3>
             <ArrowDownCircle className="text-rose-400 flex-shrink-0" size={20} />
           </div>
-          <p className="text-xl font-bold truncate">{formatCurrency(stats?.expensePaid)}</p>
+          <p className="text-xl font-bold truncate text-rose-400">{formatCurrency(stats?.expensePaid)}</p>
+          <p className="text-[11px] text-text-muted">despesas liquidadas</p>
         </div>
 
         {/* Card Despesas Pendentes */}
-        <div className="glass-panel p-4 flex flex-col gap-3">
+        <div className="glass-panel p-4 flex flex-col gap-2 rounded-2xl shadow-none border border-white/8">
           <div className="flex items-center justify-between">
             <h3 className="text-text-muted font-medium text-sm">Desp. Pendentes</h3>
             <Clock className="text-amber-400 flex-shrink-0" size={20} />
           </div>
-          <p className="text-xl font-bold truncate">{formatCurrency(stats?.expensePending)}</p>
+          <p className="text-xl font-bold truncate text-amber-400">{formatCurrency(stats?.expensePending)}</p>
+          <p className="text-[11px] text-text-muted">ainda a pagar</p>
         </div>
       </div>
 
+      <section className="space-y-4">
       {/* Gráfico de Despesas por Categoria */}
-      <div className="glass-panel p-6 min-h-[300px]">
+      <div className="glass-panel p-5 shadow-none">
         <ExpensesByCategoryChart categoryData={categoryData} />
       </div>
 
       {/* Widget Gastos por Pessoa */}
       {peopleData.length > 0 && (
-        <div className="glass-panel p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Users size={18} className="text-accent" />
-            <h3 className="font-semibold">Gastos por Pessoa</h3>
-            <span className="ml-auto text-xs text-text-muted">Total vinculado: <span className="text-rose-400 font-semibold">{formatCurrency(totalPeople)}</span></span>
+        <div className="glass-panel p-5 shadow-none">
+          <div className="flex items-start gap-2.5 mb-4">
+            <span className="w-8 h-8 rounded-lg bg-accent/10 text-accent flex items-center justify-center"><Users size={16} /></span>
+            <div>
+              <h3 className="font-semibold text-sm">Gastos por pessoa</h3>
+              <p className="text-xs text-text-muted mt-0.5">Total vinculado: <span className="text-rose-400 font-semibold">{formatCurrency(totalPeople)}</span></p>
+            </div>
           </div>
-          <div className="flex gap-4 overflow-x-auto pb-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {peopleData.map((person) => {
               const pct = totalPeople > 0 ? (person.total / totalPeople) * 100 : 0;
               return (
-                <div key={person.person_id} className="flex-shrink-0 min-w-[160px] bg-white/5 rounded-xl p-4 flex flex-col gap-3">
-                  <div className="flex items-center gap-2">
+                <div key={person.person_id} className="bg-white/5 rounded-xl p-3.5">
+                  <div className="flex items-center gap-2.5">
                     <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
                       style={{ backgroundColor: person.avatar_color }}
                     >
                       {getInitials(person.person_name)}
                     </div>
-                    <span className="font-medium text-sm truncate">{person.person_name}</span>
+                    <span className="font-medium text-sm truncate flex-1">{person.person_name}</span>
+                    <span className="text-rose-400 font-semibold text-sm whitespace-nowrap">{formatCurrency(person.total)}</span>
                   </div>
-                  <p className="text-rose-400 font-bold text-base">{formatCurrency(person.total)}</p>
-                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mt-3">
                     <div
                       className="h-full rounded-full transition-all duration-700"
                       style={{ width: `${pct}%`, backgroundColor: person.avatar_color }}
                     />
                   </div>
-                  <p className="text-xs text-text-muted">{pct.toFixed(1)}% do total</p>
+                  <p className="text-[11px] text-text-muted mt-1.5">{pct.toFixed(1)}% do total vinculado</p>
                 </div>
               );
             })}
           </div>
         </div>
       )}
+      </section>
     </div>
   );
 }

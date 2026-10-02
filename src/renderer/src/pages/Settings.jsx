@@ -319,31 +319,32 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
 
   return (
     <>
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-7 h-full overflow-y-auto pr-1 pb-6">
       <header>
+        <p className="text-xs font-semibold tracking-wide text-accent uppercase mb-1">Preferências do aplicativo</p>
         <h2 className="text-2xl font-bold">Configurações</h2>
-        <p className="text-text-muted">Ajustes e backup do sistema</p>
+        <p className="text-sm text-text-muted mt-1">Conta, segurança, recursos e proteção dos seus dados.</p>
       </header>
 
       {/* Seção de Conta Google */}
-      <div className="glass-panel p-8 max-w-3xl mb-8">
-        <div className="flex items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0">
+      <div className="glass-panel p-5 max-w-6xl shadow-none">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-white/10 shrink-0">
               {user?.picture
                 ? <img src={user.picture} alt={user.name} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 : <div className="w-full h-full bg-accent/30 flex items-center justify-center text-accent font-bold text-2xl">{user?.name?.[0]?.toUpperCase()}</div>}
             </div>
             <div>
-              <h3 className="text-xl font-semibold">{user?.name || 'Usuário'}</h3>
+              <p className="text-xs text-text-muted mb-0.5">Conta conectada</p>
+              <h3 className="text-lg font-semibold">{user?.name || 'Usuário'}</h3>
               <p className="text-sm text-text-muted">{user?.email || gdriveStatus.email}</p>
-              <p className="text-xs text-text-muted mt-1">Conta Google vinculada</p>
             </div>
           </div>
           <button
             onClick={handleGoogleAccountLogout}
             disabled={actionLoading}
-            className="text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 px-4 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shrink-0"
+            className="text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 px-3 py-2 rounded-lg text-sm font-medium transition-colors inline-flex items-center gap-2 shrink-0"
           >
             <LogOut size={16} />
             Sair da Conta
@@ -351,17 +352,23 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
         </div>
       </div>
 
+      <section className="max-w-6xl">
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold">Segurança e recursos</h3>
+          <p className="text-xs text-text-muted mt-0.5">Controle o acesso ao app e os recursos inteligentes.</p>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
       {/* Seção de Proteção por PIN */}
-      <div className="glass-panel p-8 max-w-3xl">
-        <div className="flex items-start gap-4 mb-6">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+      <div className="glass-panel p-5 shadow-none">
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
             pinEnabled ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'
           }`}>
-            {pinEnabled ? <ShieldCheck size={24} /> : <ShieldOff size={24} />}
+            {pinEnabled ? <ShieldCheck size={20} /> : <ShieldOff size={20} />}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h3 className="text-xl font-semibold">Proteção por PIN</h3>
+              <h3 className="text-base font-semibold">Proteção por PIN</h3>
               {pinEnabled ? (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Ativo</span>
               ) : (
@@ -374,8 +381,8 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-medium text-sm">{pinEnabled ? 'PIN ativado' : 'PIN desativado'}</p>
               <p className="text-xs text-text-muted mt-0.5">
@@ -429,17 +436,17 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
       </div>
 
       {/* Seção de Inteligência Artificial (Google Gemini) */}
-      <div className="glass-panel p-8 max-w-3xl">
-        <div className="flex items-start gap-4 mb-6">
+      <div className="glass-panel p-5 shadow-none">
+        <div className="flex items-start gap-3 mb-4">
           <div className={clsx(
-            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
+            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
             geminiStatus.isConfigured ? "bg-amber-500/20 text-amber-400" : "bg-white/10 text-text-muted"
           )}>
-            <Sparkles size={24} />
+            <Sparkles size={20} />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h3 className="text-xl font-semibold">Inteligência Artificial (Google Gemini)</h3>
+              <h3 className="text-base font-semibold">Inteligência Artificial</h3>
               {geminiStatus.isConfigured ? (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                   <CheckCircle2 size={12} /> Ativo e Verificado
@@ -468,7 +475,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         )}
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
           {geminiStatus.isConfigured && !editingGeminiKey ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -569,17 +576,25 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           )}
         </div>
       </div>
+        </div>
+      </section>
 
+      <section className="max-w-6xl">
+        <div className="mb-3">
+          <h3 className="text-sm font-semibold">Dados e backup</h3>
+          <p className="text-xs text-text-muted mt-0.5">Faça cópias, restaure informações e defina sua rotina de proteção.</p>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
       {/* Seção de Backup Google Drive */}
-      <div className="glass-panel p-8 max-w-3xl">
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-              <Cloud size={24} />
+      <div className="glass-panel p-5 shadow-none">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+              <Cloud size={20} />
             </div>
             <div>
               <div className="flex items-center gap-3">
-                <h3 className="text-xl font-semibold">Backup no Google Drive</h3>
+                <h3 className="text-base font-semibold">Backup no Google Drive</h3>
                 {gdriveStatus.hasDriveScope ? (
                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Drive Conectado</span>
                 ) : gdriveStatus.isAuthenticated ? (
@@ -643,8 +658,8 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <h4 className="font-semibold mb-2">Fazer Backup</h4>
             <p className="text-xs text-text-muted mb-4 min-h-[40px]">
               Envia a base de dados atual para o Drive. <br/>
@@ -662,7 +677,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
             </button>
           </div>
 
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <h4 className="font-semibold mb-2 text-rose-400">Restaurar Dados</h4>
             <p className="text-xs text-text-muted mb-4 min-h-[40px]">
               Baixa o último backup do Drive e substitui os dados atuais deste computador.
@@ -680,14 +695,14 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
       </div>
 
       {/* Seção de Backup Automático */}
-      <div className="glass-panel p-8 max-w-3xl">
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-            <Zap size={24} />
+      <div className="glass-panel p-5 shadow-none">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <Zap size={20} />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-3">
-              <h3 className="text-xl font-semibold">Backup Automático</h3>
+              <h3 className="text-base font-semibold">Backup automático</h3>
               {autoBackup.interval !== 'off' ? (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/20">Ativo</span>
               ) : (
@@ -700,7 +715,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-5">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
           {/* Seletor de frequência */}
           <div>
             <label className="block text-sm font-medium mb-3">Frequência do backup</label>
@@ -793,15 +808,17 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           )}
         </div>
       </div>
+        </div>
+      </section>
 
       {/* Seção de Atualizações */}
-      <div className="glass-panel p-8 max-w-3xl mb-8">
-        <div className="flex items-start gap-4 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-            <RefreshCw size={24} />
+      <div className="glass-panel p-5 max-w-6xl shadow-none">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+            <RefreshCw size={20} />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-semibold">Atualizações</h3>
+            <h3 className="text-base font-semibold">Atualizações</h3>
             <p className="text-text-muted mt-1 text-sm">
               Mantenha seu aplicativo na versão mais recente para receber novos recursos e correções.
               {appVersion && <span className="block mt-1">Versão atual: <strong className="text-white">v{appVersion}</strong></span>}
@@ -809,7 +826,7 @@ export default function Settings({ updateStatus, setUpdateStatus, appVersion, us
           </div>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
           {!updateStatus ? (
              <div className="flex flex-col items-center justify-center text-center">
                 <CheckCircle2 size={32} className="text-emerald-400 mb-3" />
